@@ -1,26 +1,33 @@
+<!-- App.vue - File chính kết hợp các component -->
 <template>
-  <img alt="Vue logo" src="./assets/logo.png">
-  <HelloWorld msg="Welcome to Your Vue.js App"/>
+  <div class="app-container">
+    <!-- Sidebar bên trái -->
+    <Sidebar />
+    
+    <!-- Phần nội dung chính bên phải -->
+    <MainContent />
+  </div>
 </template>
 
 <script>
-import HelloWorld from './components/HelloWorld.vue'
+import Sidebar from './components/AppSidebar.vue'
+import MainContent from './components/MainContent.vue'
 
 export default {
   name: 'App',
   components: {
-    HelloWorld
+    Sidebar,
+    MainContent
   }
 }
 </script>
 
 <style>
-#app {
-  font-family: Avenir, Helvetica, Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-align: center;
-  color: #2c3e50;
-  margin-top: 60px;
+.app-container {
+  display: flex;
+  width: 100%;
+  min-height: 100vh;
+  background-color: #f5f5f5;
+  font-family: Arial, sans-serif;
 }
 </style>
