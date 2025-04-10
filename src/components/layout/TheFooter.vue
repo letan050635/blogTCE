@@ -1,11 +1,10 @@
-<!-- components/layout/TheFooter.vue -->
 <template>
     <footer class="footer">
       <div class="container">
         <div class="footer-content">
           <div class="footer-logo">
             <h3>TCE-EMS.COM</h3>
-            <p>Blog chia sẻ thủ thuật Blogspot và WordPress</p>
+            <p>Blog thông báo</p>
           </div>
           
           <div class="footer-links">
