@@ -21,10 +21,10 @@ export default {
   data() {
     return {
       navItems: [
-        { name: 'Home', path: '/' }, 
-        { name: 'Blogspot', path: '/blogspot' },
-        { name: 'Wordpress', path: '/wordpress' },
-        { name: 'SEO', path: '/seo' }
+        { name: 'Thông báo nội bộ', path: '/' }, 
+        { name: 'Nội quy, quy định', path: '/blogspot' },
+        { name: 'Chia sẻ', path: '/wordpress' },
+        { name: 'Hộp thư góp ý', path: '/seo' }
       ],
       currentPath: '/'
     }

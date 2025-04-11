@@ -1,4 +1,4 @@
-<!-- eslint-disable vue/no-unused-vars -->
+<!-- modules/notifications/NotificationsList.vue -->
 <template>
   <div class="notifications-container">
     <div class="notifications-header">
@@ -9,150 +9,114 @@
           @click="markAllAsRead" 
           v-if="hasUnreadNotifications"
           title="Đánh dấu tất cả là đã đọc"
+          :disabled="isLoading"
         >
           Đánh dấu tất cả đã đọc
         </button>
       </div>
     </div>
     
+    <!-- Phần tìm kiếm -->
+    <NotificationSearch 
+      @search="handleSearch"
+      :disabled="isLoading"
+    />
+    
     <div class="notifications-toolbar">
       <div class="notifications-filter">
-        <select v-model="currentFilter" class="filter-select">
+        <select v-model="currentFilter" class="filter-select" :disabled="isLoading">
           <option value="all">Tất cả thông báo</option>
           <option value="unread">Chưa đọc</option>
           <option value="read">Đã đọc</option>
         </select>
       </div>
       <div class="notifications-count">
-        {{ displayedNotifications.length }} thông báo {{ filterText }}
+        {{ totalItems }} thông báo {{ filterText }}
       </div>
     </div>
     
-    <div class="notifications-content">
+    <!-- Loading spinner -->
+    <div v-if="isLoading" class="loading-container">
+      <div class="loading-spinner"></div>
+      <p>Đang tải thông báo...</p>
+    </div>
+    
+    <!-- Danh sách thông báo -->
+    <div v-else class="notifications-content">
       <NotificationItem 
-        v-for="(notification) in displayedNotifications" 
+        v-for="notification in notifications" 
         :key="notification.id"
         :notification="notification"
         @open-popup="openNotificationPopup"
         @toggle-read="toggleReadStatus"
       />
       
-      <div v-if="displayedNotifications.length === 0" class="no-notifications">
-        Không có thông báo {{ filterText }}
+      <div v-if="notifications.length === 0" class="no-notifications">
+        Không tìm thấy thông báo {{ filterText }}
       </div>
     </div>
     
+    <!-- Phân trang -->
+    <PaginationControl 
+      v-if="!isLoading && totalPages > 1"
+      :currentPage="currentPage"
+      :totalItems="totalItems"
+      :itemsPerPage="itemsPerPage"
+      @page-changed="changePage"
+    />
+    
+    <!-- Popup thông báo -->
     <NotificationPopup 
       :notification="selectedNotification" 
       :isOpen="isPopupOpen"
       @close="closeNotificationPopup"
       @mark-read="markAsRead"
     />
+    
+    <!-- Thông báo lỗi -->
+    <div v-if="error" class="error-message">
+      <p>{{ error }}</p>
+      <button @click="fetchNotifications" class="retry-button">Thử lại</button>
+    </div>
   </div>
 </template>
 
 <script>
 import NotificationItem from './NotificationItem'
 import NotificationPopup from './NotificationPopup'
+import NotificationSearch from './NotificationSearch'
+import PaginationControl from '@/components/common/PaginationControl.vue'
+import notificationService from '@/services/notificationService.js'
 
 export default {
   name: 'NotificationsList',
   components: {
     NotificationItem,
-    NotificationPopup
+    NotificationPopup,
+    NotificationSearch,
+    PaginationControl
   },
   data() {
     return {
       isPopupOpen: false,
       selectedNotification: {},
       currentFilter: 'all',
-      notifications: [
-        {
-          id: 1,
-          title: 'Cập nhật tính năng mới: Popup thông báo chi tiết',
-          brief: 'Chúng tôi vừa cập nhật tính năng popup hiển thị chi tiết thông báo...',
-          content: `<h3>Tính năng mới: Popup thông báo chi tiết</h3>
-          <p>Chúng tôi vừa cập nhật và triển khai tính năng popup hiển thị chi tiết thông báo, giúp người dùng xem được toàn bộ nội dung thông báo mà không cần rời khỏi trang hiện tại.</p>
-          <p>Tính năng này bao gồm:</p>
-          <ul>
-            <li>Hiển thị tiêu đề đầy đủ của thông báo</li>
-            <li>Hiển thị chi tiết nội dung thông báo</li>
-            <li>Hiển thị thông tin ngày đăng/ngày cập nhật</li>
-            <li>Khả năng đánh dấu thông báo đã đọc</li>
-            <li>Đóng popup bằng nút X hoặc nhấp vào vùng ngoài</li>
-          </ul>
-          <p>Chúng tôi hy vọng rằng tính năng mới sẽ giúp nâng cao trải nghiệm người dùng trên website TCE-EMS.COM.</p>`,
-          date: '04/04/2025',
-          isNew: true,
-          useHtml: true,
-          read: false
-        },
-        {
-          id: 2,
-          title: 'Thông báo bảo trì hệ thống ngày 05/04/2025',
-          brief: 'Chúng tôi sẽ tiến hành bảo trì hệ thống vào ngày 05/04/2025...',
-          content: 'Chúng tôi sẽ tiến hành bảo trì hệ thống vào ngày 05/04/2025 từ 23:00 đến 02:00 ngày 06/04/2025. Trong thời gian này, website có thể không truy cập được hoặc hoạt động không ổn định. Mong quý khách thông cảm vì sự bất tiện này. Việc bảo trì giúp cải thiện hiệu suất và bảo mật của hệ thống, mang lại trải nghiệm tốt hơn cho người dùng.',
-          date: '02/04/2025',
-          updateDate: '03/04/2025',
-          isNew: true,
-          useHtml: false,
-          read: false
-        },
-        {
-          id: 3,
-          title: 'Hướng dẫn: Tối ưu template Blogspot chuẩn SEO',
-          brief: 'Trong bài viết này, chúng tôi sẽ hướng dẫn cách tối ưu template Blogspot...',
-          content: `<h3>Hướng dẫn tối ưu template Blogspot chuẩn SEO</h3>
-          <p>Trong bài viết này, chúng tôi sẽ hướng dẫn bạn cách tối ưu template Blogspot để đạt chuẩn SEO tốt nhất cho website của bạn.</p>
-          <p>Các bước chính bao gồm:</p>
-          <ol>
-            <li>Tối ưu cấu trúc HTML</li>
-            <li>Tối ưu thẻ heading (H1, H2, H3...)</li>
-            <li>Tối ưu hình ảnh</li>
-            <li>Tối ưu tốc độ tải trang</li>
-            <li>Cải thiện trải nghiệm người dùng trên mobile</li>
-          </ol>
-          <p>Hãy theo dõi blog của chúng tôi để nhận thêm những thủ thuật hữu ích khác.</p>`,
-          date: '27/03/2025',
-          updateDate: '28/03/2025',
-          isNew: true,
-          useHtml: true,
-          read: false
-        },
-        {
-          id: 4,
-          title: 'Cập nhật giao diện mới cho website',
-          brief: 'Chúng tôi vừa cập nhật giao diện mới cho website, mang đến trải nghiệm người dùng tốt hơn...',
-          content: 'Chúng tôi vừa cập nhật giao diện mới cho website, mang đến trải nghiệm người dùng tốt hơn. Giao diện mới được thiết kế để tối ưu trên cả thiết bị desktop và mobile, với tốc độ tải trang nhanh hơn và bố cục rõ ràng hơn. Chúng tôi hy vọng bạn sẽ thích giao diện mới này!',
-          date: '20/03/2025',
-          isNew: false,
-          useHtml: false,
-          read: true
-        },
-        {
-          id: 5,
-          title: 'Cảm ơn bạn đã sử dụng dịch vụ của chúng tôi',
-          brief: 'Cảm ơn bạn đã sử dụng dịch vụ của chúng tôi trong thời gian qua...',
-          content: 'Cảm ơn bạn đã sử dụng dịch vụ của chúng tôi trong thời gian qua. Chúng tôi luôn nỗ lực cải thiện dịch vụ để mang lại trải nghiệm tốt nhất cho người dùng. Mọi góp ý của bạn đều rất quý giá đối với chúng tôi.',
-          date: '15/03/2025',
-          isNew: false,
-          useHtml: false,
-          read: true
-        }
-      ]
+      currentPage: 1,
+      itemsPerPage: 5,
+      searchCriteria: {
+        query: '',
+        searchInContent: false,
+        fromDate: '',
+        toDate: ''
+      },
+      notifications: [],
+      totalItems: 0,
+      totalPages: 0,
+      isLoading: false,
+      error: null
     }
   },
   computed: {
-    displayedNotifications() {
-      switch (this.currentFilter) {
-        case 'read':
-          return this.notifications.filter(notification => notification.read);
-        case 'unread':
-          return this.notifications.filter(notification => !notification.read);
-        default:
-          return this.notifications;
-      }
-    },
     hasUnreadNotifications() {
       return this.notifications.some(notification => !notification.read);
     },
@@ -168,78 +132,190 @@ export default {
     }
   },
   methods: {
+    /**
+     * Lấy danh sách thông báo từ service
+     */
+    fetchNotifications() {
+      this.isLoading = true;
+      this.error = null;
+      
+      // Chuẩn bị tham số
+      const params = {
+        page: this.currentPage,
+        limit: this.itemsPerPage,
+        filter: this.currentFilter === 'all' ? null : this.currentFilter,
+        search: this.searchCriteria.query || null
+      };
+      
+      // Thêm tham số tìm kiếm nâng cao
+      if (this.searchCriteria.fromDate) {
+        params.fromDate = this.searchCriteria.fromDate;
+      }
+      
+      if (this.searchCriteria.toDate) {
+        params.toDate = this.searchCriteria.toDate;
+      }
+      
+      if (this.searchCriteria.searchInContent) {
+        params.searchInContent = true;
+      }
+      
+      // Gọi service
+      notificationService.getNotifications(params)
+        .then(response => {
+          this.notifications = response.data;
+          this.totalItems = response.pagination.total;
+          this.totalPages = response.pagination.totalPages;
+          
+          // Nếu trang hiện tại lớn hơn tổng số trang, reset về trang 1
+          if (this.totalPages > 0 && this.currentPage > this.totalPages) {
+            this.currentPage = 1;
+            this.fetchNotifications();
+          }
+        })
+        .catch(error => {
+          this.error = 'Đã xảy ra lỗi khi tải thông báo. ' + error.message;
+          console.error('Error fetching notifications:', error);
+        })
+        .finally(() => {
+          this.isLoading = false;
+        });
+    },
+    
+    /**
+     * Mở popup hiển thị chi tiết thông báo
+     */
     openNotificationPopup(notification) {
       this.selectedNotification = notification;
       this.isPopupOpen = true;
       // Thêm class để ngăn cuộn trang khi popup đang mở
       document.body.classList.add('popup-open');
     },
+    
+    /**
+     * Đóng popup thông báo
+     */
     closeNotificationPopup() {
       this.isPopupOpen = false;
       // Xóa class để cho phép cuộn trang trở lại bình thường
       document.body.classList.remove('popup-open');
     },
+    
+    /**
+     * Đánh dấu thông báo đã đọc
+     */
     markAsRead(notificationId) {
-      const notification = this.notifications.find(n => n.id === notificationId);
-      if (notification) {
-        notification.read = true;
-        // Đóng popup sau khi đánh dấu đã đọc
-        this.closeNotificationPopup();
-        
-        // Lưu trạng thái vào localStorage (tùy chọn)
-        this.saveReadStatus();
-      }
-    },
-    toggleReadStatus(notificationId) {
-      const notification = this.notifications.find(n => n.id === notificationId);
-      if (notification) {
-        notification.read = !notification.read;
-        
-        // Lưu trạng thái vào localStorage (tùy chọn)
-        this.saveReadStatus();
-      }
-    },
-    markAllAsRead() {
-      this.notifications.forEach(notification => {
-        notification.read = true;
-      });
+      this.isLoading = true;
       
-      // Lưu trạng thái vào localStorage (tùy chọn)
-      this.saveReadStatus();
-    },
-    saveReadStatus() {
-      // Lưu trạng thái vào localStorage để duy trì giữa các phiên
-      const readStatus = this.notifications.reduce((status, notification) => {
-        status[notification.id] = notification.read;
-        return status;
-      }, {});
-      
-      try {
-        localStorage.setItem('notifications_read_status', JSON.stringify(readStatus));
-      } catch (error) {
-        console.error('Failed to save read status to localStorage:', error);
-      }
-    },
-    loadReadStatus() {
-      try {
-        const storedStatus = localStorage.getItem('notifications_read_status');
-        if (storedStatus) {
-          const readStatus = JSON.parse(storedStatus);
+      notificationService.updateReadStatus(notificationId, true)
+        .then(() => {
+          // Cập nhật UI
+          const notification = this.notifications.find(n => n.id === notificationId);
+          if (notification) {
+            notification.read = true;
+          }
           
+          // Đóng popup
+          this.closeNotificationPopup();
+          
+          // Tải lại danh sách nếu đang lọc theo trạng thái đọc
+          if (this.currentFilter !== 'all') {
+            this.fetchNotifications();
+          }
+        })
+        .catch(error => {
+          console.error('Error marking notification as read:', error);
+        })
+        .finally(() => {
+          this.isLoading = false;
+        });
+    },
+    
+    /**
+     * Chuyển đổi trạng thái đọc của thông báo
+     */
+    toggleReadStatus(notificationId) {
+      // Tìm thông báo trong danh sách
+      const notification = this.notifications.find(n => n.id === notificationId);
+      if (!notification) return;
+      
+      const newReadStatus = !notification.read;
+      this.isLoading = true;
+      
+      notificationService.updateReadStatus(notificationId, newReadStatus)
+        .then(() => {
+          // Cập nhật UI
+          notification.read = newReadStatus;
+          
+          // Tải lại danh sách nếu đang lọc theo trạng thái đọc
+          if (this.currentFilter !== 'all') {
+            this.fetchNotifications();
+          }
+        })
+        .catch(error => {
+          console.error('Error toggling notification read status:', error);
+        })
+        .finally(() => {
+          this.isLoading = false;
+        });
+    },
+    
+    /**
+     * Đánh dấu tất cả thông báo là đã đọc
+     */
+    markAllAsRead() {
+      this.isLoading = true;
+      
+      notificationService.markAllAsRead()
+        .then(() => {
+          // Cập nhật UI
           this.notifications.forEach(notification => {
-            if (readStatus[notification.id] !== undefined) {
-              notification.read = readStatus[notification.id];
-            }
+            notification.read = true;
           });
-        }
-      } catch (error) {
-        console.error('Failed to load read status from localStorage:', error);
+          
+          // Tải lại danh sách nếu đang lọc theo trạng thái đọc
+          if (this.currentFilter !== 'all') {
+            this.fetchNotifications();
+          }
+        })
+        .catch(error => {
+          console.error('Error marking all notifications as read:', error);
+        })
+        .finally(() => {
+          this.isLoading = false;
+        });
+    },
+    
+    /**
+     * Chuyển trang
+     */
+    changePage(page) {
+      if (this.currentPage !== page) {
+        this.currentPage = page;
+        this.fetchNotifications();
       }
+    },
+    
+    /**
+     * Xử lý tìm kiếm
+     */
+    handleSearch(searchParams) {
+      this.searchCriteria = { ...searchParams };
+      // Reset về trang đầu tiên khi tìm kiếm
+      this.currentPage = 1;
+      this.fetchNotifications();
+    }
+  },
+  watch: {
+    // Tải lại dữ liệu khi thay đổi bộ lọc
+    currentFilter() {
+      this.currentPage = 1;
+      this.fetchNotifications();
     }
   },
   mounted() {
-    // Tải trạng thái đọc từ localStorage khi component được tạo
-    this.loadReadStatus();
+    // Tải danh sách thông báo khi component được tạo
+    this.fetchNotifications();
   }
 }
 </script>
@@ -250,6 +326,7 @@ export default {
   border-radius: 5px;
   overflow: hidden;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  position: relative;
 }
 
 .notifications-header {
@@ -282,8 +359,13 @@ export default {
   transition: background-color 0.2s;
 }
 
-.mark-all-button:hover {
+.mark-all-button:hover:not(:disabled) {
   background-color: rgba(255, 255, 255, 0.3);
+}
+
+.mark-all-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .notifications-toolbar {
@@ -303,6 +385,11 @@ export default {
   font-size: 14px;
 }
 
+.filter-select:disabled {
+  background-color: #f1f1f1;
+  cursor: not-allowed;
+}
+
 .notifications-count {
   font-size: 13px;
   color: #666;
@@ -319,6 +406,61 @@ export default {
   text-align: center;
   color: #777;
   font-style: italic;
+}
+
+/* Loading spinner */
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 0;
+  background-color: #f9f9f9;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #0066b3;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 15px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.loading-container p {
+  color: #666;
+  font-size: 14px;
+}
+
+/* Error message */
+.error-message {
+  padding: 20px;
+  background-color: #ffebee;
+  color: #d32f2f;
+  text-align: center;
+  border-top: 1px solid #ffcdd2;
+}
+
+.retry-button {
+  margin-top: 10px;
+  background-color: #0066b3;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.2s;
+}
+
+.retry-button:hover {
+  background-color: #004e8c;
 }
 
 @media screen and (max-width: 768px) {
