@@ -3,18 +3,10 @@
     <TheHeader />
     <MainNavigation />
     <!-- Nội dung chính -->
-    <div class="container">
-      <div class="content-wrapper">
-        <!-- Phần nội dung chính bên trái -->
-        <div class="main-content">
-          <NotificationsList />
-        </div>
-        <!-- Sidebar bên phải -->
-        <div class="sidebar">
-          <BlogspotTipsList />
-          <WordPressTipsList />
-        </div>
-      </div>
+    <div class="main-container">
+      <router-view v-slot="{ Component }">
+        <component :is="Component" />
+      </router-view>
     </div>
     <ScrollToTopButton />
     <!-- Footer -->
@@ -25,9 +17,6 @@
 <script>
 import TheHeader from './components/layout/TheHeader'
 import MainNavigation from './components/navigation/MainNavigation.vue'
-import NotificationsList from './modules/notifications/NotificationsList'
-import BlogspotTipsList from './modules/blogspot/BlogspotTipsList.vue'
-import WordPressTipsList from './modules/wordpress/WordPressTipsList.vue'
 import ScrollToTopButton from './components/navigation/ScrollToTopButton.vue'
 import TheFooter from './components/layout/TheFooter.vue'
 
@@ -36,9 +25,6 @@ export default {
   components: {
     TheHeader,
     MainNavigation,
-    NotificationsList,
-    BlogspotTipsList,
-    WordPressTipsList,
     ScrollToTopButton,
     TheFooter
   }
@@ -61,12 +47,15 @@ body {
 #app {
   width: 100%;
   min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 } 
 
 .container {
   max-width: 1200px;
   margin: 0 auto;
   padding: 15px;
+  width: 100%;
 }
 
 .content-wrapper {
@@ -87,6 +76,25 @@ body {
   display: flex;
   flex-direction: column;
   gap: 20px;
+}
+
+/* Phản hồi khi nhấn vào các phần tử tương tác */
+button, a {
+  transition: all 0.2s ease;
+}
+
+button:active, a:active {
+  transform: scale(0.98);
+}
+
+/* CSS cho form */
+input, select, textarea {
+  font-family: inherit;
+}
+
+/* Tạo khoảng trống phía dưới để footer luôn nằm ở cuối trang */
+.main-container {
+  flex: 1;
 }
 
 @media screen and (max-width: 768px) {
