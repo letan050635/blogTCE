@@ -1,12 +1,10 @@
 <!-- components/auth/LoginButton.vue -->
 <template>
   <div class="login-button-container">
-    <!-- Hiển thị khi chưa đăng nhập -->
     <div v-if="!isLoggedIn" class="login-actions">
       <router-link to="/login" class="login-link">Đăng nhập</router-link>
     </div>
     
-    <!-- Hiển thị khi đã đăng nhập -->
     <div v-else class="user-info-dropdown">
       <div class="user-info" @click="toggleDropdown">
         <span class="user-name">{{ user.fullName }}</span>
@@ -54,7 +52,6 @@ export default {
     
     logout() {
       authService.logout();
-      // Tải lại trang sau khi đăng xuất
       window.location.href = '/';
     },
     

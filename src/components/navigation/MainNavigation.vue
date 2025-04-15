@@ -22,7 +22,7 @@ export default {
     return {
       navItems: [
         { name: 'Thông báo nội bộ', path: '/' }, 
-        { name: 'Nội quy, quy định', path: '/blogspot' },
+        { name: 'Nội quy, quy định', path: '/regulation' },
         { name: 'Chia sẻ', path: '/wordpress' },
         { name: 'Hộp thư góp ý', path: '/seo' }
       ],

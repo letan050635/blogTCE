@@ -11,7 +11,7 @@
             <h4>Liên kết nhanh</h4>
             <ul>
               <li><router-link to="/">Trang chủ</router-link></li>
-              <li><router-link to="/blogspot">Blogspot</router-link></li>
+              <li><router-link to="/regulation">regulations</router-link></li>
               <li><router-link to="/wordpress">WordPress</router-link></li>
               <li><router-link to="/seo">SEO</router-link></li>
             </ul>

@@ -1,4 +1,3 @@
-// src/router/auth-guard.js
 import authService from '@/services/authService';
 
 // Auth Guard - Bảo vệ các route yêu cầu đăng nhập

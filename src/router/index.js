@@ -1,13 +1,12 @@
-// router/index.js
 import { createRouter, createWebHistory } from 'vue-router'
 import HomeView from '@/views/HomeView.vue'
-import BlogspotView from '@/views/BlogspotView.vue'
 import WordpressView from '@/views/WordPressView'
 import SEOView from '@/views/SEOView.vue'
 import LoginView from '@/views/LoginView.vue'
 import ProfileView from '@/views/ProfileView.vue'
 import ChangePasswordView from '@/views/ChangePasswordView.vue'
 import ForgotPasswordView from '@/views/ForgotPasswordView.vue'
+import RegulationsView from '@/views/RegulationsView.vue'
 import { requireAuth, requireGuest } from './auth-guard'
 
 const routes = [
@@ -17,9 +16,9 @@ const routes = [
     component: HomeView
   },
   {
-    path: '/blogspot',
-    name: 'blogspot',
-    component: BlogspotView
+    path: '/regulation',
+    name: 'regulations',
+    component: RegulationsView
   },
   {
     path: '/wordpress',

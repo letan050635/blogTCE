@@ -9,8 +9,6 @@
         </div>
         <!-- Sidebar bên phải -->
         <div class="sidebar">
-          <BlogspotTipsList />
-          <WordPressTipsList />
         </div>
       </div>
     </div>
@@ -19,15 +17,11 @@
   
 <script>
 import NotificationsList from '@/modules/notifications/NotificationsList'
-import BlogspotTipsList from '@/modules/blogspot/BlogspotTipsList.vue'
-import WordPressTipsList from '@/modules/wordpress/WordPressTipsList.vue'
 
 export default {
   name: 'HomeView',
   components: {
     NotificationsList,
-    BlogspotTipsList,
-    WordPressTipsList
   }
 }
 </script>

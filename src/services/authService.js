@@ -1,6 +1,4 @@
 /* eslint-disable no-unused-vars */
-// services/authService.js
-
 // Dữ liệu người dùng mẫu
 const sampleUsers = [
     {
