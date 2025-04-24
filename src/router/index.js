@@ -7,7 +7,13 @@ import ProfileView from '@/views/ProfileView.vue'
 import ChangePasswordView from '@/views/ChangePasswordView.vue'
 import ForgotPasswordView from '@/views/ForgotPasswordView.vue'
 import RegulationsView from '@/views/RegulationsView.vue'
-import { requireAuth, requireGuest } from './auth-guard'
+import { requireAuth, requireGuest, requireAdmin } from './auth-guard'
+
+// Admin views - sử dụng lazy loading để tối ưu hiệu suất
+const AdminDashboard = () => import('@/views/admin/DashboardView.vue')
+const NotificationsManagement = () => import('@/views/admin/NotificationsManagementView.vue')
+const RegulationsManagement = () => import('@/views/admin/RegulationsManagementView.vue')
+const UsersManagement = () => import('@/views/admin/UsersManagementView.vue')
 
 const routes = [
   {
@@ -54,6 +60,37 @@ const routes = [
     name: 'change-password',
     component: ChangePasswordView,
     beforeEnter: requireAuth
+  },
+  // Routes cho trang quản trị Admin
+  {
+    path: '/admin',
+    name: 'admin',
+    redirect: '/admin/dashboard',
+    beforeEnter: requireAdmin
+  },
+  {
+    path: '/admin/dashboard',
+    name: 'admin-dashboard',
+    component: AdminDashboard,
+    beforeEnter: requireAdmin
+  },
+  {
+    path: '/admin/notifications',
+    name: 'admin-notifications',
+    component: NotificationsManagement,
+    beforeEnter: requireAdmin
+  },
+  {
+    path: '/admin/regulations',
+    name: 'admin-regulations',
+    component: RegulationsManagement,
+    beforeEnter: requireAdmin
+  },
+  {
+    path: '/admin/users',
+    name: 'admin-users',
+    component: UsersManagement,
+    beforeEnter: requireAdmin
   }
 ]
 

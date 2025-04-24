@@ -113,7 +113,7 @@ export default {
 }
 
 .regulation-popup-header {
-  background-color: #FF7F00;
+  background-color: #0066b3;
   color: #fff;
   padding: 15px 20px;
   display: flex;

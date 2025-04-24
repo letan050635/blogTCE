@@ -25,3 +25,24 @@ export const requireGuest = (to, from, next) => {
     next();
   }
 };
+
+// Admin Guard - Bảo vệ các route dành cho admin
+export const requireAdmin = (to, from, next) => {
+  if (!authService.isLoggedIn()) {
+    // Nếu người dùng chưa đăng nhập, chuyển hướng về trang đăng nhập
+    next({
+      path: '/login',
+      query: { redirect: to.fullPath }
+    });
+  } else {
+    // Kiểm tra vai trò admin
+    const user = authService.getCurrentUser();
+    if (user && user.role === 'admin') {
+      // Nếu là admin, cho phép truy cập
+      next();
+    } else {
+      // Nếu không phải admin, chuyển hướng về trang chủ
+      next({ path: '/' });
+    }
+  }
+};
