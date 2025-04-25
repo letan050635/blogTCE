@@ -1,7 +1,8 @@
 <template>
   <div id="app">
-    <TheHeader />
-    <MainNavigation />
+    <TheHeader v-if="!isAdminRoute" />
+    <MainNavigation v-if="!isAdminRoute" />
+    
     <!-- Nội dung chính -->
     <div class="main-container">
       <router-view v-slot="{ Component }">
@@ -10,7 +11,7 @@
     </div>
     <ScrollToTopButton />
     <!-- Footer -->
-    <TheFooter />
+    <TheFooter v-if="!isAdminRoute" />
   </div>
 </template>
 
@@ -27,6 +28,11 @@ export default {
     MainNavigation,
     ScrollToTopButton,
     TheFooter
+  },
+  computed: {
+    isAdminRoute() {
+      return this.$route.path.startsWith('/admin');
+    }
   }
 }
 </script>

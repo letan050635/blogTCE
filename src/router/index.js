@@ -9,7 +9,7 @@ import ForgotPasswordView from '@/views/ForgotPasswordView.vue'
 import RegulationsView from '@/views/RegulationsView.vue'
 import { requireAuth, requireGuest, requireAdmin } from './auth-guard'
 
-// Admin views - sử dụng lazy loading để tối ưu hiệu suất
+// Lazy load các component
 const AdminDashboard = () => import('@/views/admin/DashboardView.vue')
 const NotificationsManagement = () => import('@/views/admin/NotificationsManagementView.vue')
 const RegulationsManagement = () => import('@/views/admin/RegulationsManagementView.vue')

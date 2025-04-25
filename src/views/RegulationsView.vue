@@ -1,51 +1,38 @@
 <!-- src/views/RegulationsView.vue -->
 <template>
-    <div class="regulations-view">
-      <div class="container">
-        <div class="content-wrapper">
-          <!-- Phần nội dung chính -->
-          <div class="main-content">
-            <RegulationsList />
-          </div>
-          <!-- Sidebar bên phải -->
-          <div class="sidebar">
-            <div class="sidebar-widget">
-              <h3>Quy định quan trọng</h3>
-              <ul class="important-regulations">
-                <li v-for="regulation in importantRegulations" :key="regulation.id">
-                  <a href="#" @click.prevent="openRegulation(regulation)">
-                    {{ regulation.title }}
-                    <span v-if="regulation.isNew" class="badge new-badge">Mới</span>
-                  </a>
-                </li>
-              </ul>
-            </div>
-            
-            <div class="sidebar-widget">
-              <h3>Hướng dẫn</h3>
-              <div class="guide-content">
-                <p>Để đọc nội quy và quy định:</p>
-                <ol>
-                  <li>Nhấp vào tiêu đề quy định để xem chi tiết</li>
-                  <li>Sử dụng bộ lọc để hiển thị quy định đã đọc hoặc chưa đọc</li>
-                  <li>Nhấp vào ô kiểm để đánh dấu quy định đã đọc</li>
-                </ol>
-                <p>Mọi thắc mắc về nội quy và quy định vui lòng liên hệ với <strong>Phòng Nhân sự</strong> để được giải đáp.</p>
-              </div>
-            </div>
+  <div class="regulations-view">
+    <div class="container">
+      <div class="content-wrapper">
+        <!-- Phần nội dung chính -->
+        <div class="main-content">
+          <RegulationsList />
+        </div>
+        <!-- Sidebar bên phải - chỉ giữ lại phần quy định quan trọng -->
+        <div class="sidebar">
+          <div class="sidebar-widget">
+            <h3>Quy định quan trọng</h3>
+            <ul class="important-regulations">
+              <li v-for="regulation in importantRegulations" :key="regulation.id">
+                <a href="#" @click.prevent="openRegulation(regulation)">
+                  {{ regulation.title }}
+                  <span v-if="regulation.isNew" class="badge new-badge">Mới</span>
+                </a>
+              </li>
+            </ul>
           </div>
         </div>
       </div>
-      
-      <!-- Popup xem quy định -->
-      <RegulationPopup 
-        :regulation="selectedRegulation" 
-        :isOpen="isPopupOpen"
-        @close="closeRegulationPopup"
-        @mark-read="markAsRead"
-      />
     </div>
-  </template>
+    
+    <!-- Popup xem quy định -->
+    <RegulationPopup 
+      :regulation="selectedRegulation" 
+      :isOpen="isPopupOpen"
+      @close="closeRegulationPopup"
+      @mark-read="markAsRead"
+    />
+  </div>
+</template>
   
   <script>
   import RegulationsList from '@/modules/regulations/RegulationsList.vue'
@@ -66,25 +53,18 @@
       }
     },
     methods: {
-      /**
-       * Lấy danh sách quy định quan trọng
-       */
       fetchImportantRegulations() {
         regulationsService.getRegulations()
           .then(response => { 
-            // Lọc ra các quy định quan trọng
             this.importantRegulations = response.data
               .filter(regulation => regulation.isImportant)
-              .slice(0, 5); // Chỉ lấy tối đa 5 quy định quan trọng
+              .slice(0, 5); 
           })
           .catch(error => {
             console.error('Error fetching important regulations:', error);
           });
       },
       
-      /**
-       * Mở popup hiển thị chi tiết quy định
-       */
       openRegulation(regulation) {
         regulationsService.getRegulationById(regulation.id)
           .then(detailedRegulation => {

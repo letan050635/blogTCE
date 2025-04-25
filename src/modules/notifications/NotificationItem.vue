@@ -1,26 +1,44 @@
 <!-- modules/notifications/NotificationItem.vue -->
 <template>
-  <div class="notification-item" :class="{ 'notification-read': notification.read }">
+  <div
+    class="notification-item"
+    :class="{ 'notification-read': notification.read }"
+  >
     <div class="notification-checkbox">
-      <input type="checkbox" :checked="notification.read" @change="toggleRead">
+      <input
+        type="checkbox"
+        :checked="notification.read"
+        @change="toggleRead"
+      />
     </div>
-    
+
     <div class="notification-content">
       <div class="notification-title">
         <a href="#" @click.prevent="openPopup">
           {{ notification.title }}
         </a>
-        
+
         <div class="notification-badges">
-          <span v-if="notification.isNew" class="notification-badge new-badge">New</span>
-          <span v-if="!notification.read" class="notification-badge unread-badge">Chưa đọc</span>
+          <span v-if="notification.isNew" class="notification-badge new-badge"
+            >New</span
+          >
+          <span
+            v-if="!notification.read"
+            class="notification-badge unread-badge"
+            >Chưa đọc</span
+          >
+          <span
+            v-if="notification.isImportant"
+            class="notification-badge important-badge"
+            >Quan trọng</span
+          >
         </div>
       </div>
-      
+
       <div class="notification-brief" v-if="notification.brief">
         {{ notification.brief }}
       </div>
-      
+
       <div class="notification-date">
         <template v-if="notification.updateDate">
           <span>ngày cập nhật {{ notification.updateDate }}</span>
@@ -36,22 +54,22 @@
 
 <script>
 export default {
-  name: 'NotificationItem',
+  name: "NotificationItem",
   props: {
     notification: {
       type: Object,
-      required: true
-    }
+      required: true,
+    },
   },
   methods: {
     openPopup() {
-      this.$emit('open-popup', this.notification);
+      this.$emit("open-popup", this.notification);
     },
     toggleRead() {
-      this.$emit('toggle-read', this.notification.id);
-    }
-  }
-}
+      this.$emit("toggle-read", this.notification.id);
+    },
+  },
+};
 </script>
 
 <style scoped>
@@ -133,7 +151,7 @@ export default {
 }
 
 .unread-badge {
-  background-color: #4CAF50;
+  background-color: #4caf50;
   color: #fff;
 }
 
@@ -156,6 +174,11 @@ export default {
   flex-wrap: wrap;
 }
 
+.important-badge {
+  background-color: #f44336;
+  color: #fff;
+}
+
 .notification-date span {
   margin-left: 15px;
 }
@@ -165,16 +188,16 @@ export default {
     flex-direction: column;
     align-items: flex-start;
   }
-  
+
   .notification-badges {
     margin-top: 5px;
   }
-  
+
   .notification-date {
     flex-direction: column;
     align-items: flex-end;
   }
-  
+
   .notification-date span {
     margin-left: 0;
     margin-bottom: 5px;

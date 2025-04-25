@@ -1,4 +1,3 @@
-<!-- components/auth/LoginButton.vue -->
 <template>
   <div class="login-button-container">
     <div v-if="!isLoggedIn" class="login-actions">
@@ -65,14 +64,14 @@ export default {
       // Nếu đã đăng nhập, lấy thông tin người dùng
       if (this.isLoggedIn) {
         this.user = authService.getCurrentUser() || {};
-        console.log('LoginButton: User logged in', this.user);
+        //console.log('LoginButton: User logged in', this.user);
       } else {
         this.user = {};
       }
       
       // Log thay đổi trạng thái để debug
       if (wasLoggedIn !== this.isLoggedIn) {
-        console.log('LoginButton: Login state changed', this.isLoggedIn);
+        //console.log('LoginButton: Login state changed', this.isLoggedIn);
       }
     }
   },
