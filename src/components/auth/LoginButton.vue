@@ -55,54 +55,41 @@ export default {
     },
     
     checkLoginStatus() {
-      // Lưu trạng thái đăng nhập hiện tại để kiểm tra thay đổi
       const wasLoggedIn = this.isLoggedIn;
-      
-      // Kiểm tra trạng thái đăng nhập mới
       this.isLoggedIn = authService.isLoggedIn();
       
-      // Nếu đã đăng nhập, lấy thông tin người dùng
       if (this.isLoggedIn) {
         this.user = authService.getCurrentUser() || {};
-        //console.log('LoginButton: User logged in', this.user);
       } else {
         this.user = {};
       }
       
-      // Log thay đổi trạng thái để debug
       if (wasLoggedIn !== this.isLoggedIn) {
         //console.log('LoginButton: Login state changed', this.isLoggedIn);
       }
     }
   },
   created() {
-    // Kiểm tra trạng thái đăng nhập khi component được tạo
     this.checkLoginStatus();
   },
   mounted() {
-    // Thêm sự kiện để đóng dropdown khi click ra ngoài
     document.addEventListener('click', this.handleClickOutside);
     
-    // Thiết lập kiểm tra định kỳ (mỗi 2 giây)
     this.checkInterval = setInterval(() => {
       this.checkLoginStatus();
     }, 2000);
     
-    // Thêm sự kiện cho khi trang được tải lại
     window.addEventListener('load', this.checkLoginStatus);
   },
   beforeUnmount() {
-    // Dọn dẹp event listeners
     document.removeEventListener('click', this.handleClickOutside);
     window.removeEventListener('load', this.checkLoginStatus);
     
-    // Xóa interval
     if (this.checkInterval) {
       clearInterval(this.checkInterval);
     }
   },
   watch: {
-    // Theo dõi thay đổi route để cập nhật trạng thái đăng nhập
     $route() {
       this.checkLoginStatus();
     }

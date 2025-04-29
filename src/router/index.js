@@ -7,6 +7,7 @@ import ProfileView from '@/views/ProfileView.vue'
 import ChangePasswordView from '@/views/ChangePasswordView.vue'
 import ForgotPasswordView from '@/views/ForgotPasswordView.vue'
 import RegulationsView from '@/views/RegulationsView.vue'
+import AdminLoginView from '@/views/admin/AdminLoginView.vue'
 import { requireAuth, requireGuest, requireAdmin } from './auth-guard'
 
 // Lazy load các component
@@ -62,6 +63,11 @@ const routes = [
     beforeEnter: requireAuth
   },
   // Routes cho trang quản trị Admin
+  {
+    path: '/admin/login',
+    name: 'admin-login',
+    component: AdminLoginView
+  },
   {
     path: '/admin',
     name: 'admin',
