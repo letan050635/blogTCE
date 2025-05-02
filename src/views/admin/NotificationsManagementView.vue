@@ -4,11 +4,9 @@
     <div class="notifications-management">
       <div class="page-header">
         <h1>Quản lý thông báo</h1>
-        <button @click="openAddForm" class="add-button">
-          + Thêm thông báo mới
-        </button>
+        <button @click="openAddForm" class="add-button">+ Thêm thông báo mới</button>
       </div>
-
+      
       <!-- Thông báo lỗi/thành công -->
       <div v-if="successMessage" class="alert success">
         {{ successMessage }}
@@ -16,24 +14,24 @@
       <div v-if="errorMessage" class="alert error">
         {{ errorMessage }}
       </div>
-
+      
       <!-- Tìm kiếm -->
       <div class="search-container">
-        <input
-          type="text"
-          v-model="searchQuery"
-          placeholder="Tìm kiếm thông báo..."
+        <input 
+          type="text" 
+          v-model="searchQuery" 
+          placeholder="Tìm kiếm thông báo..." 
           class="search-input"
           @input="handleSearch"
         />
       </div>
-
+      
       <!-- Loading trạng thái -->
       <div v-if="isLoading" class="loading">
         <div class="spinner"></div>
         <p>Đang tải dữ liệu...</p>
       </div>
-
+      
       <!-- Bảng dữ liệu -->
       <div v-else class="data-table-container">
         <table class="data-table">
@@ -53,38 +51,32 @@
               <td>{{ notification.title }}</td>
               <td>{{ notification.date }}</td>
               <td>
-                <span
-                  class="status-badge"
-                  :class="
-                    notification.isNew ? 'status-active' : 'status-inactive'
-                  "
+                <span 
+                  class="status-badge" 
+                  :class="notification.isNew ? 'status-active' : 'status-inactive'"
                 >
-                  {{ notification.isNew ? "Có" : "Không" }}
+                  {{ notification.isNew ? 'Có' : 'Không' }}
                 </span>
               </td>
               <td>
-                <span
-                  class="status-badge"
-                  :class="
-                    notification.isImportant
-                      ? 'status-important'
-                      : 'status-inactive'
-                  "
+                <span 
+                  class="status-badge" 
+                  :class="notification.isImportant ? 'status-important' : 'status-inactive'"
                 >
-                  {{ notification.isImportant ? "Có" : "Không" }}
+                  {{ notification.isImportant ? 'Có' : 'Không' }}
                 </span>
               </td>
               <td class="actions">
-                <button
-                  @click="openEditForm(notification)"
-                  class="edit-button"
+                <button 
+                  @click="openEditForm(notification)" 
+                  class="edit-button" 
                   title="Sửa"
                 >
                   Sửa
                 </button>
-                <button
-                  @click="confirmDelete(notification)"
-                  class="delete-button"
+                <button 
+                  @click="confirmDelete(notification)" 
+                  class="delete-button" 
                   title="Xóa"
                 >
                   Xóa
@@ -96,23 +88,21 @@
             </tr>
           </tbody>
         </table>
-
+        
         <!-- Phân trang -->
         <div class="pagination" v-if="totalPages > 1">
-          <button
-            class="pagination-button"
+          <button 
+            class="pagination-button" 
             :disabled="currentPage === 1"
             @click="changePage(currentPage - 1)"
           >
             Trước
           </button>
-
-          <span class="page-info"
-            >Trang {{ currentPage }}/{{ totalPages }}</span
-          >
-
-          <button
-            class="pagination-button"
+          
+          <span class="page-info">Trang {{ currentPage }}/{{ totalPages }}</span>
+          
+          <button 
+            class="pagination-button" 
             :disabled="currentPage === totalPages"
             @click="changePage(currentPage + 1)"
           >
@@ -120,112 +110,106 @@
           </button>
         </div>
       </div>
-
+      
       <!-- Dialog thêm/sửa thông báo -->
-      <div
-        v-if="showFormDialog"
-        class="dialog-overlay"
-        @click="closeFormDialog"
-      >
+      <div v-if="showFormDialog" class="dialog-overlay" @click="closeFormDialog">
         <div class="dialog-content" @click.stop>
           <div class="dialog-header">
-            <h2>{{ isEditing ? "Sửa thông báo" : "Thêm thông báo mới" }}</h2>
-            <button @click="closeFormDialog" class="close-button">
-              &times;
-            </button>
+            <h2>{{ isEditing ? 'Sửa thông báo' : 'Thêm thông báo mới' }}</h2>
+            <button @click="closeFormDialog" class="close-button">&times;</button>
           </div>
-
+          
           <form @submit.prevent="saveNotification" class="notification-form">
             <div class="form-group">
               <label for="title">Tiêu đề <span class="required">*</span></label>
-              <input
-                type="text"
-                id="title"
-                v-model="formData.title"
+              <input 
+                type="text" 
+                id="title" 
+                v-model="formData.title" 
                 required
                 placeholder="Nhập tiêu đề thông báo"
+                class="form-control"
               />
             </div>
-
+            
             <div class="form-group">
               <label for="brief">Mô tả ngắn</label>
-              <input
-                type="text"
-                id="brief"
-                v-model="formData.brief"
+              <input 
+                type="text" 
+                id="brief" 
+                v-model="formData.brief" 
                 placeholder="Nhập mô tả ngắn"
+                class="form-control"
               />
             </div>
-
+            
             <div class="form-group">
-              <label for="content"
-                >Nội dung <span class="required">*</span></label
-              >
-              <textarea
-                id="content"
-                v-model="formData.content"
-                rows="10"
+              <label for="content">Nội dung <span class="required">*</span></label>
+              <textarea 
+                id="content" 
+                v-model="formData.content" 
+                rows="10" 
                 required
                 placeholder="Nhập nội dung thông báo"
+                class="form-control"
               ></textarea>
             </div>
-
+            
             <div class="form-row">
               <div class="form-group">
-                <label for="date"
-                  >Ngày đăng <span class="required">*</span></label
-                >
-                <input type="date" id="date" v-model="formData.date" required />
+                <label for="date">Ngày đăng <span class="required">*</span></label>
+                <input 
+                  type="date" 
+                  id="date" 
+                  v-model="formData.date" 
+                  required
+                  class="form-control"
+                />
               </div>
-
+              
               <div class="form-group">
                 <label for="updateDate">Ngày cập nhật</label>
-                <input
-                  type="date"
-                  id="updateDate"
-                  v-model="formData.updateDate"
+                <input 
+                  type="date" 
+                  id="updateDate" 
+                  v-model="formData.updateDate" 
+                  class="form-control"
                 />
               </div>
             </div>
-
+            
             <div class="form-row checkbox-group">
               <div class="form-group form-checkbox">
-                <input type="checkbox" id="isNew" v-model="formData.isNew" />
+                <input 
+                  type="checkbox" 
+                  id="isNew" 
+                  v-model="formData.isNew" 
+                />
                 <label for="isNew">Đánh dấu là mới</label>
               </div>
-
+              
               <div class="form-group form-checkbox">
-                <input
-                  type="checkbox"
-                  id="isImportant"
-                  v-model="formData.isImportant"
+                <input 
+                  type="checkbox" 
+                  id="isImportant" 
+                  v-model="formData.isImportant" 
                 />
                 <label for="isImportant">Đánh dấu là quan trọng</label>
               </div>
-
+              
               <div class="form-group form-checkbox">
-                <input
-                  type="checkbox"
-                  id="useHtml"
-                  v-model="formData.useHtml"
+                <input 
+                  type="checkbox" 
+                  id="useHtml" 
+                  v-model="formData.useHtml" 
                 />
                 <label for="useHtml">Sử dụng HTML</label>
               </div>
             </div>
-
+            
             <div class="form-actions">
-              <button
-                type="button"
-                @click="closeFormDialog"
-                class="cancel-button"
-              >
-                Hủy
-              </button>
-              <button
-                type="submit"
-                class="save-button"
-                :disabled="isSubmitting"
-              >
+              <button type="button" @click="closeFormDialog" class="cancel-button">Hủy</button>
+              <button type="submit" class="save-button" :disabled="isSubmitting">
                 <span v-if="isSubmitting">Đang lưu...</span>
                 <span v-else>Lưu thông báo</span>
               </button>
@@ -233,38 +217,23 @@
           </form>
         </div>
       </div>
-
+      
       <!-- Dialog xác nhận xóa -->
-      <div
-        v-if="showDeleteDialog"
-        class="dialog-overlay"
-        @click="closeDeleteDialog"
-      >
+      <div v-if="showDeleteDialog" class="dialog-overlay" @click="closeDeleteDialog">
         <div class="dialog-content delete-dialog" @click.stop>
           <div class="dialog-header">
             <h2>Xác nhận xóa</h2>
-            <button @click="closeDeleteDialog" class="close-button">
-              &times;
-            </button>
+            <button @click="closeDeleteDialog" class="close-button">&times;</button>
           </div>
-
+          
           <div class="dialog-body">
-            <p>
-              Bạn có chắc chắn muốn xóa thông báo
-              <strong>"{{ selectedNotification.title }}"</strong>?
-            </p>
+            <p>Bạn có chắc chắn muốn xóa thông báo <strong>"{{ selectedNotification.title }}"</strong>?</p>
             <p class="warning">Hành động này không thể hoàn tác!</p>
           </div>
-
+          
           <div class="dialog-actions">
-            <button @click="closeDeleteDialog" class="cancel-button">
-              Hủy
-            </button>
-            <button
-              @click="deleteNotification"
-              class="delete-button"
-              :disabled="isSubmitting"
-            >
+            <button @click="closeDeleteDialog" class="cancel-button">Hủy</button>
+            <button @click="deleteNotification" class="delete-button" :disabled="isSubmitting">
               <span v-if="isSubmitting">Đang xóa...</span>
               <span v-else>Xóa</span>
             </button>
@@ -274,7 +243,7 @@
     </div>
   </AdminLayout>
 </template>
-  
+
 <script>
 import { ref, reactive, onMounted } from "vue";
 import AdminLayout from "@/components/admin/AdminLayout.vue";
@@ -308,7 +277,7 @@ export default {
       date: new Date().toISOString().substr(0, 10),
       updateDate: "",
       isNew: true,
-      isImportant: false, // Thêm trường này
+      isImportant: false,
       useHtml: false,
     });
 
@@ -328,18 +297,27 @@ export default {
           search: searchQuery.value,
         });
 
-        notifications.value = result.data;
-        totalPages.value = result.pagination.totalPages;
+        // Kiểm tra định dạng dữ liệu
+        if (result && result.data) {
+          notifications.value = result.data;
+          totalPages.value = result.pagination ? result.pagination.totalPages : 1;
 
-        // If current page is greater than total pages, reset to page 1
-        if (currentPage.value > totalPages.value && totalPages.value > 0) {
-          currentPage.value = 1;
-          fetchNotifications();
+          // If current page is greater than total pages, reset to page 1
+          if (currentPage.value > totalPages.value && totalPages.value > 0) {
+            currentPage.value = 1;
+            fetchNotifications();
+          }
+        } else {
+          console.error('Invalid data format:', result);
+          errorMessage.value = 'Định dạng dữ liệu không hợp lệ';
+          notifications.value = [];
+          totalPages.value = 1;
         }
       } catch (error) {
         console.error("Error fetching notifications:", error);
-        errorMessage.value =
-          "Không thể tải danh sách thông báo. Vui lòng thử lại.";
+        errorMessage.value = `Không thể tải danh sách thông báo: ${error.message || 'Lỗi không xác định'}`;
+        notifications.value = [];
+        totalPages.value = 1;
       } finally {
         isLoading.value = false;
       }
@@ -373,7 +351,7 @@ export default {
       formData.date = new Date().toISOString().substr(0, 10);
       formData.updateDate = "";
       formData.isNew = true;
-      formData.isImportant = false; // Thêm trường này
+      formData.isImportant = false;
       formData.useHtml = false;
     };
 
@@ -399,16 +377,16 @@ export default {
 
       // Fill form with notification data
       formData.id = notification.id;
-      formData.title = notification.title;
+      formData.title = notification.title || "";
       formData.brief = notification.brief || "";
-      formData.content = notification.content;
+      formData.content = notification.content || "";
       formData.date = formatDate(notification.date);
       formData.updateDate = notification.updateDate
         ? formatDate(notification.updateDate)
         : "";
-      formData.isNew = notification.isNew;
-      formData.isImportant = notification.isImportant; // Thêm trường này
-      formData.useHtml = notification.useHtml;
+      formData.isNew = !!notification.isNew;
+      formData.isImportant = !!notification.isImportant;
+      formData.useHtml = !!notification.useHtml;
 
       showFormDialog.value = true;
     };
@@ -431,14 +409,14 @@ export default {
 
         const notificationData = {
           title: formData.title,
-          brief: formData.brief,
+          brief: formData.brief || "",
           content: formData.content,
           date: formatDateForApi(formData.date),
           updateDate: formData.updateDate
             ? formatDateForApi(formData.updateDate)
             : null,
           isNew: formData.isNew,
-          isImportant: formData.isImportant, // Thêm trường này
+          isImportant: formData.isImportant,
           useHtml: formData.useHtml,
         };
 
@@ -465,7 +443,7 @@ export default {
         }, 3000);
       } catch (error) {
         console.error("Error saving notification:", error);
-        errorMessage.value = "Không thể lưu thông báo. Vui lòng thử lại.";
+        errorMessage.value = `Không thể lưu thông báo: ${error.message || 'Vui lòng thử lại.'}`;
       } finally {
         isSubmitting.value = false;
       }
@@ -503,7 +481,7 @@ export default {
         }, 3000);
       } catch (error) {
         console.error("Error deleting notification:", error);
-        errorMessage.value = "Không thể xóa thông báo. Vui lòng thử lại.";
+        errorMessage.value = `Không thể xóa thông báo: ${error.message || 'Vui lòng thử lại.'}`;
       } finally {
         isSubmitting.value = false;
       }
@@ -540,33 +518,10 @@ export default {
       deleteNotification,
     };
   },
-};
+}
 </script>
-  
-  <style scoped>
-.status-badge {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 12px;
-  font-size: 12px;
-  font-weight: 500;
-}
 
-.status-active {
-  background-color: #e8f5e9;
-  color: #2e7d32;
-}
-
-.status-important {
-  background-color: #ffebee;
-  color: #c62828;
-}
-
-.status-inactive {
-  background-color: #f5f5f5;
-  color: #757575;
-}
-
+<style scoped>
 .notifications-management {
   position: relative;
 }
@@ -705,6 +660,11 @@ export default {
   color: #2e7d32;
 }
 
+.status-important {
+  background-color: #ffebee;
+  color: #c62828;
+}
+
 .status-inactive {
   background-color: #f5f5f5;
   color: #757575;
@@ -739,8 +699,13 @@ export default {
   color: white;
 }
 
-.delete-button:hover {
+.delete-button:hover:not(:disabled) {
   background-color: #d32f2f;
+}
+
+.delete-button:disabled {
+  background-color: #ffccbc;
+  cursor: not-allowed;
 }
 
 .no-data {
@@ -829,19 +794,22 @@ export default {
   align-items: center;
   padding: 15px 20px;
   border-bottom: 1px solid #eee;
+  background-color: #0066b3;
+  color: white;
 }
 
 .dialog-header h2 {
   margin: 0;
   font-size: 18px;
-  color: #333;
+  font-weight: 500;
+  color: white;
 }
 
 .close-button {
   background: transparent;
   border: none;
   font-size: 24px;
-  color: #666;
+  color: white;
   cursor: pointer;
 }
 
@@ -891,24 +859,28 @@ export default {
   color: #333;
 }
 
-.form-group input[type="text"],
-.form-group input[type="date"],
-.form-group select,
-.form-group textarea {
+.form-control {
   width: 100%;
-  padding: 8px 12px;
+  padding: 10px 12px;
   border: 1px solid #ddd;
   border-radius: 4px;
   font-size: 14px;
   transition: border-color 0.2s;
 }
 
-.form-group input:focus,
-.form-group select:focus,
-.form-group textarea:focus {
+.form-control:focus {
   outline: none;
   border-color: #0066b3;
   box-shadow: 0 0 0 2px rgba(0, 102, 179, 0.1);
+}
+
+.form-group textarea.form-control {
+  min-height: 150px;
+  resize: vertical;
+}
+
+.form-group input[type="date"].form-control {
+  padding: 8px 12px;
 }
 
 .form-checkbox {
@@ -920,7 +892,14 @@ export default {
   margin-right: 8px;
 }
 
+.form-checkbox label {
+  display: inline;
+  margin-bottom: 0;
+}
+
 .checkbox-group {
+  display: flex;
+  flex-wrap: wrap;
   gap: 30px;
 }
 
@@ -974,18 +953,23 @@ export default {
     max-width: 95%;
     width: 95%;
   }
-
+  
   .form-row {
     flex-direction: column;
     gap: 15px;
   }
-
+  
+  .checkbox-group {
+    flex-direction: column;
+    gap: 10px;
+  }
+  
   .actions {
     flex-direction: column;
     gap: 8px;
   }
-
-  .edit-button,
+  
+  .edit-button, 
   .delete-button {
     width: 100%;
   }

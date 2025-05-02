@@ -8,7 +8,11 @@ export default {
    */
   getRegulations(params = {}) {
     return apiClient.get('/regulations', { params })
-      .then(response => response.data);
+      .then(response => response.data)
+      .catch(error => {
+        console.error('Error in getRegulations:', error);
+        throw error;
+      });
   },
   
   /**
@@ -18,7 +22,11 @@ export default {
    */
   getImportantRegulations(limit = 5) {
     return apiClient.get('/regulations/important', { params: { limit } })
-      .then(response => response.data);
+      .then(response => response.data)
+      .catch(error => {
+        console.error('Error fetching important regulations:', error);
+        throw error;
+      });
   },
   
   /**
@@ -28,7 +36,11 @@ export default {
    */
   getRegulationById(id) {
     return apiClient.get(`/regulations/${id}`)
-      .then(response => response.data);
+      .then(response => response.data)
+      .catch(error => {
+        console.error(`Error fetching regulation ${id}:`, error);
+        throw error;
+      });
   },
   
   /**
@@ -38,7 +50,11 @@ export default {
    */
   createRegulation(regulationData) {
     return apiClient.post('/regulations', regulationData)
-      .then(response => response.data);
+      .then(response => response.data)
+      .catch(error => {
+        console.error('Error creating regulation:', error);
+        throw error;
+      });
   },
   
   /**
@@ -49,7 +65,11 @@ export default {
    */
   updateRegulation(id, regulationData) {
     return apiClient.put(`/regulations/${id}`, regulationData)
-      .then(response => response.data);
+      .then(response => response.data)
+      .catch(error => {
+        console.error(`Error updating regulation ${id}:`, error);
+        throw error;
+      });
   },
   
   /**
@@ -59,7 +79,11 @@ export default {
    */
   deleteRegulation(id) {
     return apiClient.delete(`/regulations/${id}`)
-      .then(response => response.data);
+      .then(response => response.data)
+      .catch(error => {
+        console.error(`Error deleting regulation ${id}:`, error);
+        throw error;
+      });
   },
   
   /**
@@ -70,7 +94,11 @@ export default {
    */
   updateReadStatus(id, read) {
     return apiClient.put(`/regulations/${id}/read-status`, { read })
-      .then(response => response.data);
+      .then(response => response.data)
+      .catch(error => {
+        console.error(`Error updating read status for regulation ${id}:`, error);
+        throw error;
+      });
   },
   
   /**
@@ -79,6 +107,10 @@ export default {
    */
   markAllAsRead() {
     return apiClient.put('/regulations/mark-all-read')
-      .then(response => response.data);
+      .then(response => response.data)
+      .catch(error => {
+        console.error('Error marking all regulations as read:', error);
+        throw error;
+      });
   }
 };

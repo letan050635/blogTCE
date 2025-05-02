@@ -10,18 +10,20 @@ const apiClient = axios.create({
 
 apiClient.interceptors.request.use(
   (config) => {
-    // Xác định rõ URLs của admin để sử dụng token admin
-    const isAdminRoute = config.url.includes('/api/admin/') || 
-                        config.url.includes('/api/notifications') || 
-                        config.url.includes('/api/regulations') ||
-                        config.url.includes('/api/auth/users');
+    // Kiểm tra xem yêu cầu có phải là yêu cầu admin (cần token admin)
+    const isAdminRoute = config.url.includes('/admin/') || 
+                        (config.url.includes('/auth/users') && (config.method !== 'get' || config.url !== '/auth/users/me')) ||
+                        ((config.url.includes('/notifications') || config.url.includes('/regulations')) && 
+                         (config.method === 'post' || config.method === 'put' || config.method === 'delete'));
     
     if (isAdminRoute) {
+      // Sử dụng admin token
       const token = localStorage.getItem('admin_auth_token');
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       }
     } else {
+      // Sử dụng user token
       const token = localStorage.getItem('auth_token');
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
@@ -41,9 +43,11 @@ apiClient.interceptors.response.use(
   },
   (error) => {
     if (error.response && error.response.status === 401) {
-      // Xác định xem lỗi từ API admin hay user
+      // Kiểm tra xem lỗi từ API admin hay user
       const isAdminRoute = error.config.url.includes('/admin/') || 
-                         error.config.url.includes('/auth/users');
+                         (error.config.url.includes('/auth/users') && error.config.url !== '/auth/users/me') ||
+                         ((error.config.url.includes('/notifications/') || error.config.url.includes('/regulations/')) && 
+                          (error.config.method === 'post' || error.config.method === 'put' || error.config.method === 'delete'));
       
       if (isAdminRoute) {
         localStorage.removeItem('admin_auth_token');
@@ -63,7 +67,29 @@ apiClient.interceptors.response.use(
       }
     }
     
-    return Promise.reject(error);
+    // Xử lý và trả về thông báo lỗi cụ thể nếu có
+    let errorMessage = 'Đã xảy ra lỗi';
+    
+    if (error.response) {
+      // Lỗi từ server (có response)
+      if (error.response.data && error.response.data.message) {
+        errorMessage = error.response.data.message;
+      } else {
+        errorMessage = `Lỗi: ${error.response.status} - ${error.response.statusText}`;
+      }
+    } else if (error.request) {
+      // Không nhận được response
+      errorMessage = 'Không thể kết nối đến máy chủ';
+    } else {
+      // Lỗi trong quá trình thiết lập request
+      errorMessage = error.message;
+    }
+    
+    // Tạo đối tượng lỗi mới với thông báo
+    const enhancedError = new Error(errorMessage);
+    enhancedError.originalError = error;
+    
+    return Promise.reject(enhancedError);
   }
 );
 

@@ -85,9 +85,10 @@ export default {
       });
   },
   
+  // CHỈNH SỬA: Thêm admin method chuyên biệt để cập nhật thông tin người dùng
   updateUser(userId, userData) {
     return apiClient.put(`/auth/users/${userId}`, userData)
-      .then(response => response.data.user);
+      .then(response => response.data);
   },
   
   changePassword(currentPassword, newPassword) {
