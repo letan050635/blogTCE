@@ -8,7 +8,7 @@
           <NotificationsList />
         </div>
 
-        <!-- Sidebar bên phải - chỉ giữ lại phần thông báo quan trọng -->
+        <!-- Sidebar bên phải - thông báo quan trọng -->
         <div class="sidebar">
           <div class="sidebar-widget">
             <h3>Thông báo quan trọng</h3>
@@ -64,10 +64,12 @@ export default {
         .getNotifications({
           page: 1,
           limit: 5,
-          isImportant: true, 
+          filter: 'all'
         })
         .then((response) => {
-          this.importantNotifications = response.data;
+          this.importantNotifications = response.data
+            .filter(notification => notification.isImportant)
+            .slice(0, 5);
         })
         .catch((error) => {
           console.error("Error fetching important notifications:", error);
@@ -141,7 +143,7 @@ export default {
 }
 
 .sidebar-widget h3 {
-  background-color: #ff7f00;
+  background-color: #ff5722;
   color: #fff;
   margin: 0;
   padding: 12px 15px;
@@ -175,7 +177,7 @@ export default {
 
 .important-notifications a:hover {
   background-color: #f5f5f5;
-  color: #ff7f00;
+  color: #ff5722;
 }
 
 .badge {
