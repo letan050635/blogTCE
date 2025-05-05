@@ -64,11 +64,11 @@ export default {
         .getNotifications({
           page: 1,
           limit: 5,
-          filter: 'all'
+          filter: "all",
         })
         .then((response) => {
           this.importantNotifications = response.data
-            .filter(notification => notification.isImportant)
+            .filter((notification) => notification.isImportant)
             .slice(0, 5);
         })
         .catch((error) => {
@@ -84,6 +84,11 @@ export default {
           this.isPopupOpen = true;
           // Thêm class để ngăn cuộn trang khi popup đang mở
           document.body.classList.add("popup-open");
+
+          // Tự động đánh dấu là đã đọc nếu chưa đọc
+          if (!detailedNotification.read && this.$store.getters.isLoggedIn) {
+            this.markAsRead(notification.id);
+          }
         })
         .catch((error) => {
           console.error("Error fetching notification details:", error);

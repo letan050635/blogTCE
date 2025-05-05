@@ -1,88 +1,62 @@
-import apiClient from "./apiClient";
+import createBaseService from './baseService';
+
+const baseService = createBaseService('/notifications');
 
 export default {
+  ...baseService,
+  
+  /**
+   * Lấy danh sách thông báo
+   * @param {Object} params - Tham số lọc và phân trang
+   * @returns {Promise<Object>} - Promise trả về danh sách thông báo và thông tin phân trang
+   */
   getNotifications(params = {}) {
-    return apiClient
-      .get("/notifications", { params })
-      .then((response) => response.data)
-      .catch((error) => {
-        console.error("Error in getNotifications:", error);
-        throw error;
-      });
-  },
-
-
-  getNotificationById(id) {
-    return apiClient
-      .get(`/notifications/${id}`)
-      .then((response) => response.data)
-      .catch((error) => {
-        console.error(`Error fetching notification ${id}:`, error);
-        throw error;
-      });
-  },
-
-
-  createNotification(notificationData) {
-    return apiClient
-      .post("/notifications", notificationData)
-      .then((response) => response.data)
-      .catch((error) => {
-        console.error("Error creating notification:", error);
-        throw error;
-      });
-  },
-
-  updateNotification(id, notificationData) {
-    return apiClient
-      .put(`/notifications/${id}`, notificationData)
-      .then((response) => response.data)
-      .catch((error) => {
-        console.error(`Error updating notification ${id}:`, error);
-        throw error;
-      });
-  },
-
-  deleteNotification(id) {
-    return apiClient
-      .delete(`/notifications/${id}`)
-      .then((response) => response.data)
-      .catch((error) => {
-        console.error(`Error deleting notification ${id}:`, error);
-        throw error;
-      });
-  },
-
-  updateReadStatus(id, read) {
-    return apiClient
-      .put(`/notifications/${id}/read-status`, { read })
-      .then((response) => response.data)
-      .catch((error) => {
-        console.error(
-          `Error updating read status for notification ${id}:`,
-          error
-        );
-        throw error;
-      });
-  },
-
-  getImportantNotifications(limit = 5) {
-    return apiClient
-      .get("/notifications/important", { params: { limit } })
-      .then((response) => response.data)
-      .catch((error) => {
-        console.error("Error fetching important notifications:", error);
-        throw error;
-      });
+    return baseService.getList(params);
   },
   
-  markAllAsRead() {
-    return apiClient
-      .put("/notifications/mark-all-read")
-      .then((response) => response.data)
-      .catch((error) => {
-        console.error("Error marking all notifications as read:", error);
-        throw error;
-      });
+  /**
+   * Lấy chi tiết một thông báo
+   * @param {number} id - ID của thông báo
+   * @returns {Promise<Object>} - Promise trả về thông tin chi tiết thông báo
+   */
+  getNotificationById(id) {
+    return baseService.getById(id);
   },
+  
+  /**
+   * Lấy danh sách thông báo quan trọng
+   * @param {number} limit - Số lượng thông báo tối đa
+   * @returns {Promise<Object>} - Promise trả về danh sách thông báo quan trọng
+   */
+  getImportantNotifications(limit = 5) {
+    return baseService.getList({ isImportant: true, limit });
+  },
+  
+  /**
+   * Tạo thông báo mới
+   * @param {Object} notificationData - Dữ liệu thông báo mới
+   * @returns {Promise<Object>} - Promise trả về thông báo đã tạo
+   */
+  createNotification(notificationData) {
+    return baseService.create(notificationData);
+  },
+  
+  /**
+   * Cập nhật thông báo
+   * @param {number} id - ID của thông báo
+   * @param {Object} notificationData - Dữ liệu cần cập nhật
+   * @returns {Promise<Object>} - Promise trả về thông báo đã cập nhật
+   */
+  updateNotification(id, notificationData) {
+    return baseService.update(id, notificationData);
+  },
+  
+  /**
+   * Xóa thông báo
+   * @param {number} id - ID của thông báo
+   * @returns {Promise<Object>} - Promise trả về kết quả xóa
+   */
+  deleteNotification(id) {
+    return baseService.delete(id);
+  }
 };

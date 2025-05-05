@@ -1,4 +1,4 @@
-<!-- modules/notifications/NotificationsList.vue -->
+<!-- /src/modules/notifications/NotificationsList.vue (tối ưu) -->
 <template>
   <div class="notifications-container">
     <div class="notifications-header">
@@ -16,7 +16,6 @@
       </div>
     </div>
     
-    <!-- Phần tìm kiếm -->
     <NotificationSearch 
       @search="handleSearch"
       :disabled="isLoading"
@@ -35,13 +34,8 @@
       </div>
     </div>
     
-    <!-- Loading spinner -->
-    <div v-if="isLoading" class="loading-container">
-      <div class="loading-spinner"></div>
-      <p>Đang tải thông báo...</p>
-    </div>
+    <LoadingSpinner v-if="isLoading" message="Đang tải thông báo..." />
     
-    <!-- Danh sách thông báo -->
     <div v-else class="notifications-content">
       <NotificationItem 
         v-for="notification in notifications" 
@@ -56,7 +50,6 @@
       </div>
     </div>
     
-    <!-- Phân trang -->
     <PaginationControl 
       v-if="!isLoading && totalPages > 1"
       :currentPage="currentPage"
@@ -65,7 +58,6 @@
       @page-changed="changePage"
     />
     
-    <!-- Popup thông báo -->
     <NotificationPopup 
       :notification="selectedNotification" 
       :isOpen="isPopupOpen"
@@ -73,20 +65,24 @@
       @mark-read="markAsRead"
     />
     
-    <!-- Thông báo lỗi -->
-    <div v-if="error" class="error-message">
-      <p>{{ error }}</p>
-      <button @click="fetchNotifications" class="retry-button">Thử lại</button>
-    </div>
+    <AlertMessage 
+      v-if="error" 
+      :message="error" 
+      type="error" 
+    />
   </div>
 </template>
 
 <script>
-import NotificationItem from './NotificationItem'
-import NotificationPopup from './NotificationPopup'
-import NotificationSearch from './NotificationSearch'
-import PaginationControl from '@/components/common/PaginationControl.vue'
-import notificationService from '@/services/notificationService.js'
+import { ref, computed, watch, onMounted } from 'vue';
+import NotificationItem from './NotificationItem';
+import NotificationPopup from './NotificationPopup';
+import NotificationSearch from './NotificationSearch';
+import PaginationControl from '@/components/common/PaginationControl.vue';
+import LoadingSpinner from '@/components/common/LoadingSpinner.vue';
+import AlertMessage from '@/components/common/AlertMessage.vue';
+import notificationService from '@/services/notificationService.js';
+import useList from '@/composables/useList';
 
 export default {
   name: 'NotificationsList',
@@ -94,34 +90,40 @@ export default {
     NotificationItem,
     NotificationPopup,
     NotificationSearch,
-    PaginationControl
+    PaginationControl,
+    LoadingSpinner,
+    AlertMessage
   },
-  data() {
-    return {
-      isPopupOpen: false,
-      selectedNotification: {},
-      currentFilter: 'all',
-      currentPage: 1,
-      itemsPerPage: 5,
-      searchCriteria: {
-        query: '',
-        searchInContent: false,
-        fromDate: '',
-        toDate: ''
-      },
-      notifications: [],
-      totalItems: 0,
-      totalPages: 0,
-      isLoading: false,
-      error: null
-    }
-  },
-  computed: {
-    hasUnreadNotifications() {
-      return this.notifications.some(notification => !notification.read);
-    },
-    filterText() {
-      switch (this.currentFilter) {
+  setup() {
+    const isPopupOpen = ref(false);
+    const selectedNotification = ref({});
+    const currentFilter = ref('all');
+    const itemsPerPage = ref(5);
+    const searchCriteria = ref({
+      query: '',
+      searchInContent: false,
+      fromDate: '',
+      toDate: ''
+    });
+    const error = ref(null);
+    
+    const {
+      isLoading,
+      data: notifications,
+      currentPage,
+      totalPages,
+      totalItems,
+      fetchData
+    } = useList(notificationService.getNotifications, {
+      defaultPageSize: itemsPerPage.value
+    });
+    
+    const hasUnreadNotifications = computed(() => {
+      return notifications.value.some(notification => !notification.read);
+    });
+    
+    const filterText = computed(() => {
+      switch (currentFilter.value) {
         case 'read':
           return 'đã đọc';
         case 'unread':
@@ -129,193 +131,154 @@ export default {
         default:
           return '';
       }
-    }
-  },
-  methods: {
-    /**
-     * Lấy danh sách thông báo từ service
-     */
-    fetchNotifications() {
-      this.isLoading = true;
-      this.error = null;
-      
-      // Chuẩn bị tham số
-      const params = {
-        page: this.currentPage,
-        limit: this.itemsPerPage,
-        filter: this.currentFilter === 'all' ? null : this.currentFilter,
-        search: this.searchCriteria.query || null
-      };
-      
-      // Thêm tham số tìm kiếm nâng cao
-      if (this.searchCriteria.fromDate) {
-        params.fromDate = this.searchCriteria.fromDate;
-      }
-      
-      if (this.searchCriteria.toDate) {
-        params.toDate = this.searchCriteria.toDate;
-      }
-      
-      if (this.searchCriteria.searchInContent) {
-        params.searchInContent = true;
-      }
-      
-      // Gọi service
-      notificationService.getNotifications(params)
-        .then(response => {
-          this.notifications = response.data;
-          this.totalItems = response.pagination.total;
-          this.totalPages = response.pagination.totalPages;
-          
-          // Nếu trang hiện tại lớn hơn tổng số trang, reset về trang 1
-          if (this.totalPages > 0 && this.currentPage > this.totalPages) {
-            this.currentPage = 1;
-            this.fetchNotifications();
-          }
-        })
-        .catch(error => {
-          this.error = 'Đã xảy ra lỗi khi tải thông báo. ' + error.message;
-          console.error('Error fetching notifications:', error);
-        })
-        .finally(() => {
-          this.isLoading = false;
-        });
-    },
+    });
     
-    /**
-     * Mở popup hiển thị chi tiết thông báo
-     */
-    openNotificationPopup(notification) {
-      this.selectedNotification = notification;
-      this.isPopupOpen = true;
-      // Thêm class để ngăn cuộn trang khi popup đang mở
+    const fetchNotifications = async () => {
+      try {
+        const params = {
+          page: currentPage.value,
+          limit: itemsPerPage.value,
+          filter: currentFilter.value === 'all' ? null : currentFilter.value,
+          search: searchCriteria.value.query || null
+        };
+        
+        if (searchCriteria.value.fromDate) {
+          params.fromDate = searchCriteria.value.fromDate;
+        }
+        
+        if (searchCriteria.value.toDate) {
+          params.toDate = searchCriteria.value.toDate;
+        }
+        
+        if (searchCriteria.value.searchInContent) {
+          params.searchInContent = true;
+        }
+        
+        await fetchData(params);
+        error.value = null;
+      } catch (err) {
+        error.value = 'Đã xảy ra lỗi khi tải thông báo. ' + err.message;
+        console.error('Error fetching notifications:', err);
+      }
+    };
+    
+    const openNotificationPopup = (notification) => {
+      selectedNotification.value = notification;
+      isPopupOpen.value = true;
       document.body.classList.add('popup-open');
-    },
+    };
     
-    /**
-     * Đóng popup thông báo
-     */
-    closeNotificationPopup() {
-      this.isPopupOpen = false;
-      // Xóa class để cho phép cuộn trang trở lại bình thường
+    const closeNotificationPopup = () => {
+      isPopupOpen.value = false;
       document.body.classList.remove('popup-open');
-    },
+    };
     
-    /**
-     * Đánh dấu thông báo đã đọc
-     */
-    markAsRead(notificationId) {
-      this.isLoading = true;
+    const markAsRead = async (notificationId) => {
+      isLoading.value = true;
       
-      notificationService.updateReadStatus(notificationId, true)
-        .then(() => {
-          // Cập nhật UI
-          const notification = this.notifications.find(n => n.id === notificationId);
-          if (notification) {
-            notification.read = true;
-          }
-          
-          // Đóng popup
-          this.closeNotificationPopup();
-          
-          // Tải lại danh sách nếu đang lọc theo trạng thái đọc
-          if (this.currentFilter !== 'all') {
-            this.fetchNotifications();
-          }
-        })
-        .catch(error => {
-          console.error('Error marking notification as read:', error);
-        })
-        .finally(() => {
-          this.isLoading = false;
-        });
-    },
+      try {
+        await notificationService.updateReadStatus(notificationId, true);
+        
+        const notification = notifications.value.find(n => n.id === notificationId);
+        if (notification) {
+          notification.read = true;
+        }
+        
+        closeNotificationPopup();
+        
+        if (currentFilter.value !== 'all') {
+          fetchNotifications();
+        }
+      } catch (err) {
+        console.error('Error marking notification as read:', err);
+      } finally {
+        isLoading.value = false;
+      }
+    };
     
-    /**
-     * Chuyển đổi trạng thái đọc của thông báo
-     */
-    toggleReadStatus(notificationId) {
-      // Tìm thông báo trong danh sách
-      const notification = this.notifications.find(n => n.id === notificationId);
+    const toggleReadStatus = async (notificationId) => {
+      const notification = notifications.value.find(n => n.id === notificationId);
       if (!notification) return;
       
       const newReadStatus = !notification.read;
-      this.isLoading = true;
+      isLoading.value = true;
       
-      notificationService.updateReadStatus(notificationId, newReadStatus)
-        .then(() => {
-          // Cập nhật UI
-          notification.read = newReadStatus;
-          
-          // Tải lại danh sách nếu đang lọc theo trạng thái đọc
-          if (this.currentFilter !== 'all') {
-            this.fetchNotifications();
-          }
-        })
-        .catch(error => {
-          console.error('Error toggling notification read status:', error);
-        })
-        .finally(() => {
-          this.isLoading = false;
-        });
-    },
-    
-    /**
-     * Đánh dấu tất cả thông báo là đã đọc
-     */
-    markAllAsRead() {
-      this.isLoading = true;
-      
-      notificationService.markAllAsRead()
-        .then(() => {
-          // Cập nhật UI
-          this.notifications.forEach(notification => {
-            notification.read = true;
-          });
-          
-          // Tải lại danh sách nếu đang lọc theo trạng thái đọc
-          if (this.currentFilter !== 'all') {
-            this.fetchNotifications();
-          }
-        })
-        .catch(error => {
-          console.error('Error marking all notifications as read:', error);
-        })
-        .finally(() => {
-          this.isLoading = false;
-        });
-    },
-    
-    /**
-     * Chuyển trang
-     */
-    changePage(page) {
-      if (this.currentPage !== page) {
-        this.currentPage = page;
-        this.fetchNotifications();
+      try {
+        await notificationService.updateReadStatus(notificationId, newReadStatus);
+        notification.read = newReadStatus;
+        
+        if (currentFilter.value !== 'all') {
+          fetchNotifications();
+        }
+      } catch (err) {
+        console.error('Error toggling notification read status:', err);
+      } finally {
+        isLoading.value = false;
       }
-    },
+    };
     
-    /**
-     * Xử lý tìm kiếm
-     */
-    handleSearch(searchParams) {
-      this.searchCriteria = { ...searchParams };
-      // Reset về trang đầu tiên khi tìm kiếm
-      this.currentPage = 1;
-      this.fetchNotifications();
-    }
-  },
-  watch: {
-    // Tải lại dữ liệu khi thay đổi bộ lọc
-    currentFilter() {
-      this.currentPage = 1;
-      this.fetchNotifications();
-    }
-  },
-  mounted() {
-    // Tải danh sách thông báo khi component được tạo
-    this.fetchNotifications();
+    const markAllAsRead = async () => {
+      isLoading.value = true;
+      
+      try {
+        await notificationService.markAllAsRead();
+        notifications.value.forEach(notification => {
+          notification.read = true;
+        });
+        
+        if (currentFilter.value !== 'all') {
+          fetchNotifications();
+        }
+      } catch (err) {
+        console.error('Error marking all notifications as read:', err);
+      } finally {
+        isLoading.value = false;
+      }
+    };
+    
+    const changePage = (page) => {
+      if (currentPage.value !== page) {
+        currentPage.value = page;
+        fetchNotifications();
+      }
+    };
+    
+    const handleSearch = (searchParams) => {
+      searchCriteria.value = { ...searchParams };
+      currentPage.value = 1;
+      fetchNotifications();
+    };
+    
+    watch(currentFilter, () => {
+      currentPage.value = 1;
+      fetchNotifications();
+    });
+    
+    onMounted(() => {
+      fetchNotifications();
+    });
+    
+    return {
+      isLoading,
+      notifications,
+      isPopupOpen,
+      selectedNotification,
+      currentFilter,
+      currentPage,
+      itemsPerPage,
+      totalPages,
+      totalItems,
+      error,
+      hasUnreadNotifications,
+      filterText,
+      openNotificationPopup,
+      closeNotificationPopup,
+      markAsRead,
+      toggleReadStatus,
+      markAllAsRead,
+      changePage,
+      handleSearch
+    };
   }
 }
 </script>
@@ -429,8 +392,12 @@ export default {
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 .loading-container p {
@@ -468,24 +435,24 @@ export default {
     flex-direction: column;
     align-items: flex-start;
   }
-  
+
   .notifications-actions {
     margin-top: 10px;
     width: 100%;
   }
-  
+
   .mark-all-button {
     width: 100%;
     text-align: center;
     padding: 8px;
   }
-  
+
   .notifications-toolbar {
     flex-direction: column;
     gap: 10px;
     align-items: flex-start;
   }
-  
+
   .filter-select {
     width: 100%;
   }
