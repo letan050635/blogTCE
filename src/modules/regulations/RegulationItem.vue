@@ -2,7 +2,6 @@
   <BaseItem 
     :item="regulation" 
     @open-popup="$emit('open-popup', regulation)"
-    @toggle-read="$emit('toggle-read', regulation.id)"
   >
     <template #badges>
       <BaseItemBadge v-if="regulation.isNew" type="new" text="New" />

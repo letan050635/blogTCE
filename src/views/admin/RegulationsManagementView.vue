@@ -751,7 +751,7 @@ export default {
   background-color: white;
   border-radius: 6px;
   max-width: 80%;
-  width: 600px;
+  width: 80vw;
   max-height: 90vh;
   display: flex;
   flex-direction: column;

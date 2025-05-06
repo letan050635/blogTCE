@@ -1,19 +1,8 @@
-<!-- /src/modules/notifications/NotificationsList.vue (tối ưu) -->
+<!-- /src/modules/notifications/NotificationsList.vue (cải tiến) -->
 <template>
   <div class="notifications-container">
     <div class="notifications-header">
       <h2>Thông báo chung</h2>
-      <div class="notifications-actions">
-        <button 
-          class="mark-all-button" 
-          @click="markAllAsRead" 
-          v-if="hasUnreadNotifications"
-          title="Đánh dấu tất cả là đã đọc"
-          :disabled="isLoading"
-        >
-          Đánh dấu tất cả đã đọc
-        </button>
-      </div>
     </div>
     
     <NotificationSearch 
@@ -166,6 +155,11 @@ export default {
       selectedNotification.value = notification;
       isPopupOpen.value = true;
       document.body.classList.add('popup-open');
+      
+      // Tự động đánh dấu là đã đọc khi mở popup
+      if (!notification.read) {
+        markAsRead(notification.id);
+      }
     };
     
     const closeNotificationPopup = () => {
@@ -184,13 +178,12 @@ export default {
           notification.read = true;
         }
         
-        closeNotificationPopup();
-        
+        // Nếu đang lọc theo trạng thái đọc, cập nhật lại danh sách
         if (currentFilter.value !== 'all') {
           fetchNotifications();
         }
-      } catch (err) {
-        console.error('Error marking notification as read:', err);
+      } catch (error) {
+        console.error('Error marking notification as read:', error);
       } finally {
         isLoading.value = false;
       }
@@ -212,25 +205,6 @@ export default {
         }
       } catch (err) {
         console.error('Error toggling notification read status:', err);
-      } finally {
-        isLoading.value = false;
-      }
-    };
-    
-    const markAllAsRead = async () => {
-      isLoading.value = true;
-      
-      try {
-        await notificationService.markAllAsRead();
-        notifications.value.forEach(notification => {
-          notification.read = true;
-        });
-        
-        if (currentFilter.value !== 'all') {
-          fetchNotifications();
-        }
-      } catch (err) {
-        console.error('Error marking all notifications as read:', err);
       } finally {
         isLoading.value = false;
       }
@@ -275,7 +249,6 @@ export default {
       closeNotificationPopup,
       markAsRead,
       toggleReadStatus,
-      markAllAsRead,
       changePage,
       handleSearch
     };
@@ -305,30 +278,6 @@ export default {
   margin: 0;
   font-size: 18px;
   font-weight: 500;
-}
-
-.notifications-actions {
-  display: flex;
-}
-
-.mark-all-button {
-  background-color: rgba(255, 255, 255, 0.2);
-  color: white;
-  border: none;
-  padding: 6px 12px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 13px;
-  transition: background-color 0.2s;
-}
-
-.mark-all-button:hover:not(:disabled) {
-  background-color: rgba(255, 255, 255, 0.3);
-}
-
-.mark-all-button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
 }
 
 .notifications-toolbar {
@@ -371,80 +320,10 @@ export default {
   font-style: italic;
 }
 
-/* Loading spinner */
-.loading-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 40px 0;
-  background-color: #f9f9f9;
-}
-
-.loading-spinner {
-  width: 40px;
-  height: 40px;
-  border: 4px solid #f3f3f3;
-  border-top: 4px solid #0066b3;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-  margin-bottom: 15px;
-}
-
-@keyframes spin {
-  0% {
-    transform: rotate(0deg);
-  }
-  100% {
-    transform: rotate(360deg);
-  }
-}
-
-.loading-container p {
-  color: #666;
-  font-size: 14px;
-}
-
-/* Error message */
-.error-message {
-  padding: 20px;
-  background-color: #ffebee;
-  color: #d32f2f;
-  text-align: center;
-  border-top: 1px solid #ffcdd2;
-}
-
-.retry-button {
-  margin-top: 10px;
-  background-color: #0066b3;
-  color: white;
-  border: none;
-  padding: 8px 16px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
-  transition: background-color 0.2s;
-}
-
-.retry-button:hover {
-  background-color: #004e8c;
-}
-
 @media screen and (max-width: 768px) {
   .notifications-header {
     flex-direction: column;
     align-items: flex-start;
-  }
-
-  .notifications-actions {
-    margin-top: 10px;
-    width: 100%;
-  }
-
-  .mark-all-button {
-    width: 100%;
-    text-align: center;
-    padding: 8px;
   }
 
   .notifications-toolbar {

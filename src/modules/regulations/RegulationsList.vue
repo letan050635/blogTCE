@@ -3,17 +3,6 @@
   <div class="regulations-container">
     <div class="regulations-header">
       <h2>Nội quy, quy định</h2>
-      <div class="regulations-actions">
-        <button
-          class="mark-all-button"
-          @click="markAllAsRead"
-          v-if="hasUnreadRegulations"
-          title="Đánh dấu tất cả là đã đọc"
-          :disabled="isLoading"
-        >
-          Đánh dấu tất cả đã đọc
-        </button>
-      </div>
     </div>
 
     <div class="regulations-toolbar">
@@ -46,7 +35,6 @@
         :key="regulation.id"
         :regulation="regulation"
         @open-popup="openRegulationPopup"
-        @toggle-read="toggleReadStatus"
       />
 
       <div v-if="regulations.length === 0" class="no-regulations">
@@ -79,11 +67,12 @@
   </div>
 </template>
   
-  <script>
+<script>
 import RegulationItem from "./RegulationItem";
 import RegulationPopup from "./RegulationPopup";
 import PaginationControl from "@/components/common/PaginationControl.vue";
 import regulationsService from "@/services/regulationsService";
+import authService from "@/services/authService"; // Thêm import authService
 
 export default {
   name: "RegulationsList",
@@ -107,9 +96,6 @@ export default {
     };
   },
   computed: {
-    hasUnreadRegulations() {
-      return this.regulations.some((regulation) => !regulation.read);
-    },
     filterText() {
       switch (this.currentFilter) {
         case "read":
@@ -120,6 +106,10 @@ export default {
           return "";
       }
     },
+    // Thêm computed property để kiểm tra đăng nhập
+    isLoggedIn() {
+      return authService.isLoggedIn();
+    }
   },
   methods: {
     /**
@@ -160,6 +150,8 @@ export default {
     },
 
     openRegulationPopup(regulation) {
+      console.log("Opening regulation popup for:", regulation.id);
+      
       regulationsService
         .getRegulationById(regulation.id)
         .then((detailedRegulation) => {
@@ -168,9 +160,14 @@ export default {
           // Thêm class để ngăn cuộn trang khi popup đang mở
           document.body.classList.add("popup-open");
 
-          // Tự động đánh dấu là đã đọc nếu chưa đọc
-          if (!detailedRegulation.read && this.$store.getters.isLoggedIn) {
-            this.markAsRead(regulation.id);
+          console.log("Detailed regulation:", detailedRegulation);
+          console.log("Is read:", detailedRegulation.read);
+          console.log("Is logged in:", this.isLoggedIn);
+
+          // Tự động đánh dấu là đã đọc khi xem - sửa điều kiện
+          if (this.isLoggedIn && !detailedRegulation.read) {
+            console.log("Auto marking as read");
+            this.markAsRead(detailedRegulation.id);
           }
         })
         .catch((error) => {
@@ -188,11 +185,17 @@ export default {
     },
 
     markAsRead(regulationId) {
-      this.isLoading = true;
-
+      console.log("Marking as read:", regulationId);
+      
+      if (!this.isLoggedIn) {
+        console.log("Not logged in, cannot mark as read");
+        return;
+      }
+      
       regulationsService
         .updateReadStatus(regulationId, true)
         .then(() => {
+          console.log("Successfully marked as read");
           // Cập nhật UI
           const regulation = this.regulations.find(
             (r) => r.id === regulationId
@@ -200,9 +203,11 @@ export default {
           if (regulation) {
             regulation.read = true;
           }
-
-          // Đóng popup
-          this.closeRegulationPopup();
+          
+          // Cập nhật selectedRegulation nếu đang xem
+          if (this.selectedRegulation.id === regulationId) {
+            this.selectedRegulation.read = true;
+          }
 
           // Tải lại danh sách nếu đang lọc theo trạng thái đọc
           if (this.currentFilter !== "all") {
@@ -211,66 +216,6 @@ export default {
         })
         .catch((error) => {
           console.error("Error marking regulation as read:", error);
-        })
-        .finally(() => {
-          this.isLoading = false;
-        });
-    },
-
-    /**
-     * Chuyển đổi trạng thái đọc của quy định
-     */
-    toggleReadStatus(regulationId) {
-      // Tìm quy định trong danh sách
-      const regulation = this.regulations.find((r) => r.id === regulationId);
-      if (!regulation) return;
-
-      const newReadStatus = !regulation.read;
-      this.isLoading = true;
-
-      regulationsService
-        .updateReadStatus(regulationId, newReadStatus)
-        .then(() => {
-          // Cập nhật UI
-          regulation.read = newReadStatus;
-
-          // Tải lại danh sách nếu đang lọc theo trạng thái đọc
-          if (this.currentFilter !== "all") {
-            this.fetchRegulations();
-          }
-        })
-        .catch((error) => {
-          console.error("Error toggling regulation read status:", error);
-        })
-        .finally(() => {
-          this.isLoading = false;
-        });
-    },
-
-    /**
-     * Đánh dấu tất cả quy định là đã đọc
-     */
-    markAllAsRead() {
-      this.isLoading = true;
-
-      regulationsService
-        .markAllAsRead()
-        .then(() => {
-          // Cập nhật UI
-          this.regulations.forEach((regulation) => {
-            regulation.read = true;
-          });
-
-          // Tải lại danh sách nếu đang lọc theo trạng thái đọc
-          if (this.currentFilter !== "all") {
-            this.fetchRegulations();
-          }
-        })
-        .catch((error) => {
-          console.error("Error marking all regulations as read:", error);
-        })
-        .finally(() => {
-          this.isLoading = false;
         });
     },
 
@@ -298,7 +243,7 @@ export default {
 };
 </script>
   
-  <style scoped>
+<style scoped>
 .regulations-container {
   background-color: #fff;
   border-radius: 5px;
@@ -320,30 +265,6 @@ export default {
   margin: 0;
   font-size: 18px;
   font-weight: 500;
-}
-
-.regulations-actions {
-  display: flex;
-}
-
-.mark-all-button {
-  background-color: rgba(255, 255, 255, 0.2);
-  color: white;
-  border: none;
-  padding: 6px 12px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 13px;
-  transition: background-color 0.2s;
-}
-
-.mark-all-button:hover:not(:disabled) {
-  background-color: rgba(255, 255, 255, 0.3);
-}
-
-.mark-all-button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
 }
 
 .regulations-toolbar {
@@ -451,17 +372,6 @@ export default {
     align-items: flex-start;
   }
 
-  .regulations-actions {
-    margin-top: 10px;
-    width: 100%;
-  }
-
-  .mark-all-button {
-    width: 100%;
-    text-align: center;
-    padding: 8px;
-  }
-
   .regulations-toolbar {
     flex-direction: column;
     gap: 10px;
@@ -474,7 +384,7 @@ export default {
 }
 </style>
   
-  <style>
+<style>
 /* Ngăn cuộn trang khi popup đang mở */
 body.popup-open {
   overflow: hidden;
