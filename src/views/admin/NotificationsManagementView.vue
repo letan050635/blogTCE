@@ -42,6 +42,7 @@
               <th style="width: 120px">Ngày đăng</th>
               <th style="width: 80px">Mới</th>
               <th style="width: 80px">Quan trọng</th>
+              <th style="width: 80px">File</th>
               <th style="width: 150px">Thao tác</th>
             </tr>
           </thead>
@@ -66,6 +67,17 @@
                   {{ notification.isImportant ? 'Có' : 'Không' }}
                 </span>
               </td>
+              <td>
+                <span 
+                  v-if="notification.hasAttachment" 
+                  class="status-badge status-attachment"
+                >
+                  Có file
+                </span>
+                <span v-else class="status-badge status-inactive">
+                  Không
+                </span>
+              </td>
               <td class="actions">
                 <button 
                   @click="openEditForm(notification)" 
@@ -84,7 +96,7 @@
               </td>
             </tr>
             <tr v-if="notifications.length === 0">
-              <td colspan="6" class="no-data">Không có dữ liệu</td>
+              <td colspan="7" class="no-data">Không có dữ liệu</td>
             </tr>
           </tbody>
         </table>
@@ -207,6 +219,23 @@
               </div>
             </div>
             
+            <div class="form-group file-upload-section">
+              <h4>File đính kèm</h4>
+              <FileUpload ref="fileUpload" />
+              
+              <!-- Hiển thị danh sách file đã có (nếu đang sửa) -->
+              <div v-if="isEditing && attachments.length > 0" class="file-list">
+                <FileList 
+                  :files="attachments" 
+                  :showDelete="true"
+                  @file-deleted="handleFileDeleted"
+                />
+              </div>
+              <div v-else-if="isEditing" class="file-list-empty">
+                Không có file đính kèm
+              </div>
+            </div>
+            
             <div class="form-actions">
               <button type="button" @click="closeFormDialog" class="cancel-button">Hủy</button>
               <button type="submit" class="save-button" :disabled="isSubmitting">
@@ -229,6 +258,9 @@
           <div class="dialog-body">
             <p>Bạn có chắc chắn muốn xóa thông báo <strong>"{{ selectedNotification.title }}"</strong>?</p>
             <p class="warning">Hành động này không thể hoàn tác!</p>
+            <p v-if="selectedNotification.hasAttachment" class="warning">
+              Các file đính kèm cũng sẽ bị xóa!
+            </p>
           </div>
           
           <div class="dialog-actions">
@@ -247,12 +279,17 @@
 <script>
 import { ref, reactive, onMounted } from "vue";
 import AdminLayout from "@/components/admin/AdminLayout.vue";
+import FileUpload from '@/components/common/FileUpload.vue';
+import FileList from '@/components/common/FileList.vue';
 import notificationService from "@/services/notificationService";
+import axios from 'axios';
 
 export default {
   name: "NotificationsManagementView",
   components: {
     AdminLayout,
+    FileUpload,
+    FileList
   },
   setup() {
     // State
@@ -264,6 +301,7 @@ export default {
     const totalPages = ref(1);
     const searchQuery = ref("");
     const searchTimeout = ref(null);
+    const attachments = ref([]);
 
     // Form state
     const showFormDialog = ref(false);
@@ -353,6 +391,9 @@ export default {
       formData.isNew = true;
       formData.isImportant = false;
       formData.useHtml = false;
+      
+      // Reset file data
+      attachments.value = [];
     };
 
     const openAddForm = () => {
@@ -361,7 +402,7 @@ export default {
       showFormDialog.value = true;
     };
 
-    const openEditForm = (notification) => {
+    const openEditForm = async (notification) => {
       isEditing.value = true;
 
       // Format dates for input[type="date"]
@@ -388,11 +429,38 @@ export default {
       formData.isImportant = !!notification.isImportant;
       formData.useHtml = !!notification.useHtml;
 
+      // Lấy danh sách file đính kèm nếu có
+      if (notification.hasAttachment) {
+        try {
+          const result = await axios.get(`/api/files/notification/${notification.id}`);
+          attachments.value = result.data.attachments || [];
+        } catch (error) {
+          console.error('Error fetching attachments:', error);
+          attachments.value = [];
+          errorMessage.value = "Không thể tải file đính kèm: " + (error.message || "Lỗi không xác định");
+        }
+      } else {
+        attachments.value = [];
+      }
+
       showFormDialog.value = true;
     };
 
     const closeFormDialog = () => {
       showFormDialog.value = false;
+    };
+
+    const handleFileDeleted = (file) => {
+      // Cập nhật UI
+      attachments.value = attachments.value.filter(f => f.id !== file.id);
+      
+      // Hiển thị thông báo
+      successMessage.value = "Xóa file đính kèm thành công!";
+      
+      // Xóa thông báo sau 3 giây
+      setTimeout(() => {
+        successMessage.value = "";
+      }, 3000);
     };
 
     const saveNotification = async () => {
@@ -418,19 +486,35 @@ export default {
           isNew: formData.isNew,
           isImportant: formData.isImportant,
           useHtml: formData.useHtml,
+          hasAttachment: attachments.value.length > 0
         };
+
+        let savedNotification;
 
         if (isEditing.value) {
           // Update existing notification
-          await notificationService.updateNotification(
+          const response = await notificationService.updateNotification(
             formData.id,
             notificationData
           );
+          savedNotification = response.notification;
           successMessage.value = "Cập nhật thông báo thành công!";
         } else {
           // Create new notification
-          await notificationService.createNotification(notificationData);
+          const response = await notificationService.createNotification(notificationData);
+          savedNotification = response.notification;
           successMessage.value = "Thêm thông báo mới thành công!";
+        }
+
+        // Upload file nếu có
+        if (this.$refs.fileUpload && this.$refs.fileUpload.selectedFile) {
+          try {
+            await this.$refs.fileUpload.uploadFile('notification', savedNotification.id);
+            successMessage.value += " File đã được tải lên thành công!";
+          } catch (uploadError) {
+            console.error("Error uploading file:", uploadError);
+            successMessage.value += " Nhưng không thể tải file lên.";
+          }
         }
 
         // Close dialog and refresh list
@@ -506,6 +590,7 @@ export default {
       formData,
       showDeleteDialog,
       selectedNotification,
+      attachments,
       fetchNotifications,
       changePage,
       handleSearch,
@@ -516,6 +601,7 @@ export default {
       confirmDelete,
       closeDeleteDialog,
       deleteNotification,
+      handleFileDeleted
     };
   },
 }
@@ -668,6 +754,11 @@ export default {
 .status-inactive {
   background-color: #f5f5f5;
   color: #757575;
+}
+
+.status-attachment {
+  background-color: #e3f2fd;
+  color: #0066b3;
 }
 
 .actions {
@@ -946,6 +1037,32 @@ export default {
 .save-button:disabled {
   background-color: #b0bec5;
   cursor: not-allowed;
+}
+
+/* File upload section styling */
+.file-upload-section {
+  border: 1px dashed #ddd;
+  border-radius: 4px;
+  padding: 15px;
+  margin-bottom: 20px;
+  background-color: #f9f9f9;
+}
+
+.file-upload-section h4 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  font-size: 16px;
+  color: #555;
+}
+
+.file-list {
+  margin-top: 20px;
+}
+
+.file-list-empty {
+  color: #888;
+  font-style: italic;
+  padding: 10px 0;
 }
 
 @media screen and (max-width: 768px) {

@@ -42,6 +42,7 @@
               <th style="width: 120px">Ngày đăng</th>
               <th style="width: 80px">Mới</th>
               <th style="width: 80px">Quan trọng</th>
+              <th style="width: 80px">File</th>
               <th style="width: 150px">Thao tác</th>
             </tr>
           </thead>
@@ -66,6 +67,17 @@
                   {{ regulation.isImportant ? 'Có' : 'Không' }}
                 </span>
               </td>
+              <td>
+                <span 
+                  v-if="regulation.hasAttachment" 
+                  class="status-badge status-attachment"
+                >
+                  Có file
+                </span>
+                <span v-else class="status-badge status-inactive">
+                  Không
+                </span>
+              </td>
               <td class="actions">
                 <button 
                   @click="openEditForm(regulation)" 
@@ -84,7 +96,7 @@
               </td>
             </tr>
             <tr v-if="regulations.length === 0">
-              <td colspan="6" class="no-data">Không có dữ liệu</td>
+              <td colspan="7" class="no-data">Không có dữ liệu</td>
             </tr>
           </tbody>
         </table>
@@ -202,6 +214,23 @@
               </div>
             </div>
             
+            <div class="form-group file-upload-section">
+              <h4>File đính kèm</h4>
+              <FileUpload ref="fileUpload" />
+              
+              <!-- Hiển thị danh sách file đã có (nếu đang sửa) -->
+              <div v-if="isEditing && attachments.length > 0" class="file-list">
+                <FileList 
+                  :files="attachments" 
+                  :showDelete="true"
+                  @file-deleted="handleFileDeleted"
+                />
+              </div>
+              <div v-else-if="isEditing" class="file-list-empty">
+                Không có file đính kèm
+              </div>
+            </div>
+            
             <div class="form-actions">
               <button type="button" @click="closeFormDialog" class="cancel-button">Hủy</button>
               <button type="submit" class="save-button" :disabled="isSubmitting">
@@ -224,6 +253,9 @@
           <div class="dialog-body">
             <p>Bạn có chắc chắn muốn xóa quy định <strong>"{{ selectedRegulation.title }}"</strong>?</p>
             <p class="warning">Hành động này không thể hoàn tác!</p>
+            <p v-if="selectedRegulation.hasAttachment" class="warning">
+              Các file đính kèm cũng sẽ bị xóa!
+            </p>
           </div>
           
           <div class="dialog-actions">
@@ -242,12 +274,17 @@
 <script>
 import { ref, reactive, onMounted } from 'vue';
 import AdminLayout from '@/components/admin/AdminLayout.vue';
+import FileUpload from '@/components/common/FileUpload.vue';
+import FileList from '@/components/common/FileList.vue';
 import regulationsService from '@/services/regulationsService';
+import axios from 'axios';
 
 export default {
   name: 'RegulationsManagementView',
   components: {
-    AdminLayout
+    AdminLayout,
+    FileUpload,
+    FileList
   },
   setup() {
     // State
@@ -259,6 +296,7 @@ export default {
     const totalPages = ref(1);
     const searchQuery = ref('');
     const searchTimeout = ref(null);
+    const attachments = ref([]);
     
     // Form state
     const showFormDialog = ref(false);
@@ -369,6 +407,9 @@ export default {
       formData.isNew = true;
       formData.isImportant = false;
       formData.useHtml = true;
+      
+      // Reset file data
+      attachments.value = [];
     };
     
     const openAddForm = () => {
@@ -377,7 +418,7 @@ export default {
       showFormDialog.value = true;
     };
     
-    const openEditForm = (regulation) => {
+    const openEditForm = async (regulation) => {
       isEditing.value = true;
       
       // Fill form with regulation data
@@ -391,11 +432,38 @@ export default {
       formData.isImportant = !!regulation.isImportant;
       formData.useHtml = regulation.useHtml !== false; // Default to true if not specified
       
+      // Lấy danh sách file đính kèm nếu có
+      if (regulation.hasAttachment) {
+        try {
+          const result = await axios.get(`/api/files/regulation/${regulation.id}`);
+          attachments.value = result.data.attachments || [];
+        } catch (error) {
+          console.error('Error fetching attachments:', error);
+          attachments.value = [];
+          errorMessage.value = "Không thể tải file đính kèm: " + (error.message || "Lỗi không xác định");
+        }
+      } else {
+        attachments.value = [];
+      }
+      
       showFormDialog.value = true;
     };
     
     const closeFormDialog = () => {
       showFormDialog.value = false;
+    };
+    
+    const handleFileDeleted = (file) => {
+      // Cập nhật UI
+      attachments.value = attachments.value.filter(f => f.id !== file.id);
+      
+      // Hiển thị thông báo
+      successMessage.value = "Xóa file đính kèm thành công!";
+      
+      // Xóa thông báo sau 3 giây
+      setTimeout(() => {
+        successMessage.value = "";
+      }, 3000);
     };
     
     const saveRegulation = async () => {
@@ -412,17 +480,33 @@ export default {
           updateDate: formData.updateDate ? formatDateForApi(formData.updateDate) : null,
           isNew: formData.isNew,
           isImportant: formData.isImportant,
-          useHtml: formData.useHtml
+          useHtml: formData.useHtml,
+          hasAttachment: attachments.value.length > 0
         };
+        
+        let savedRegulation;
         
         if (isEditing.value) {
           // Update existing regulation
-          await regulationsService.updateRegulation(formData.id, regulationData);
+          const response = await regulationsService.updateRegulation(formData.id, regulationData);
+          savedRegulation = response.regulation;
           successMessage.value = 'Cập nhật quy định thành công!';
         } else {
           // Create new regulation
-          await regulationsService.createRegulation(regulationData);
+          const response = await regulationsService.createRegulation(regulationData);
+          savedRegulation = response.regulation;
           successMessage.value = 'Thêm quy định mới thành công!';
+        }
+        
+        // Upload file nếu có
+        if (this.$refs.fileUpload && this.$refs.fileUpload.selectedFile) {
+          try {
+            await this.$refs.fileUpload.uploadFile('regulation', savedRegulation.id);
+            successMessage.value += " File đã được tải lên thành công!";
+          } catch (uploadError) {
+            console.error("Error uploading file:", uploadError);
+            successMessage.value += " Nhưng không thể tải file lên.";
+          }
         }
         
         // Close dialog and refresh list
@@ -496,6 +580,7 @@ export default {
       formData,
       showDeleteDialog,
       selectedRegulation,
+      attachments,
       fetchRegulations,
       changePage,
       handleSearch,
@@ -505,7 +590,8 @@ export default {
       saveRegulation,
       confirmDelete,
       closeDeleteDialog,
-      deleteRegulation
+      deleteRegulation,
+      handleFileDeleted
     };
   }
 }
@@ -656,6 +742,11 @@ export default {
   color: #c62828;
 }
 
+.status-attachment {
+  background-color: #e3f2fd;
+  color: #0066b3;
+}
+
 .actions {
   display: flex;
   gap: 5px;
@@ -780,19 +871,22 @@ export default {
   align-items: center;
   padding: 15px 20px;
   border-bottom: 1px solid #eee;
+  background-color: #0066b3;
+  color: white;
 }
 
 .dialog-header h2 {
   margin: 0;
   font-size: 18px;
-  color: #333;
+  font-weight: 500;
+  color: white;
 }
 
 .close-button {
   background: transparent;
   border: none;
   font-size: 24px;
-  color: #666;
+  color: white;
   cursor: pointer;
 }
 
@@ -872,6 +966,8 @@ export default {
 }
 
 .checkbox-group {
+  display: flex;
+  flex-wrap: wrap;
   gap: 30px;
 }
 
@@ -920,6 +1016,32 @@ export default {
   cursor: not-allowed;
 }
 
+/* File upload section styling */
+.file-upload-section {
+  border: 1px dashed #ddd;
+  border-radius: 4px;
+  padding: 15px;
+  margin-bottom: 20px;
+  background-color: #f9f9f9;
+}
+
+.file-upload-section h4 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  font-size: 16px;
+  color: #555;
+}
+
+.file-list {
+  margin-top: 20px;
+}
+
+.file-list-empty {
+  color: #888;
+  font-style: italic;
+  padding: 10px 0;
+}
+
 @media screen and (max-width: 768px) {
   .dialog-content {
     max-width: 95%;
@@ -929,6 +1051,11 @@ export default {
   .form-row {
     flex-direction: column;
     gap: 15px;
+  }
+  
+  .checkbox-group {
+    flex-direction: column;
+    gap: 10px;
   }
   
   .actions {

@@ -5,14 +5,20 @@
         <div class="popup-content">
           <div class="popup-header">
             <h2>{{ item.title }}</h2>
-            <button class="close-button" @click="$emit('close')">&times;</button>
+            <button class="close-button" @click="$emit('close')">
+              &times;
+            </button>
           </div>
-          
+
           <div class="popup-body">
-            <div v-if="item.useHtml" class="content-text" v-html="item.content"></div>
+            <div
+              v-if="item.useHtml"
+              class="content-text"
+              v-html="item.content"
+            ></div>
             <div v-else class="content-text">{{ item.content }}</div>
           </div>
-          
+          <slot name="additional-content"></slot>
           <div class="popup-footer">
             <div class="popup-date">
               <template v-if="item.updateDate">
@@ -24,7 +30,10 @@
               </template>
             </div>
             <div class="popup-actions" v-if="!item.read">
-              <button class="mark-read-button" @click="$emit('mark-read', item.id)">
+              <button
+                class="mark-read-button"
+                @click="$emit('mark-read', item.id)"
+              >
                 {{ markReadLabel }}
               </button>
             </div>
@@ -37,70 +46,70 @@
 
 <script>
 export default {
-  name: 'BasePopup',
+  name: "BasePopup",
   props: {
     item: {
       type: Object,
       required: true,
       default: () => ({
         id: 0,
-        title: '',
-        content: '',
-        date: '',
+        title: "",
+        content: "",
+        date: "",
         updateDate: null,
         useHtml: false,
-        read: false
-      })
+        read: false,
+      }),
     },
     isOpen: {
       type: Boolean,
-      default: false
+      default: false,
     },
     dateLabel: {
       type: String,
-      default: 'Đăng'
+      default: "Đăng",
     },
     updateLabel: {
       type: String,
-      default: 'Cập nhật'
+      default: "Cập nhật",
     },
     markReadLabel: {
       type: String,
-      default: 'Đánh dấu đã đọc'
-    }
+      default: "Đánh dấu đã đọc",
+    },
   },
   mounted() {
-    document.addEventListener('keydown', this.handleKeyDown);
+    document.addEventListener("keydown", this.handleKeyDown);
     if (this.isOpen) {
-      document.body.style.overflow = 'hidden';
+      document.body.style.overflow = "hidden";
     }
   },
   beforeUnmount() {
-    document.removeEventListener('keydown', this.handleKeyDown);
-    document.body.style.overflow = '';
+    document.removeEventListener("keydown", this.handleKeyDown);
+    document.body.style.overflow = "";
   },
   watch: {
     isOpen(val) {
       if (val) {
-        document.body.style.overflow = 'hidden';
+        document.body.style.overflow = "hidden";
       } else {
-        document.body.style.overflow = '';
+        document.body.style.overflow = "";
       }
-    }
+    },
   },
   methods: {
     closeOnOverlayClick(event) {
       if (event.target === event.currentTarget) {
-        this.$emit('close');
+        this.$emit("close");
       }
     },
     handleKeyDown(event) {
-      if (this.isOpen && event.key === 'Escape') {
-        this.$emit('close');
+      if (this.isOpen && event.key === "Escape") {
+        this.$emit("close");
       }
-    }
-  }
-}
+    },
+  },
+};
 </script>
 
 <style scoped>
@@ -250,24 +259,24 @@ export default {
     width: 95%;
     max-height: 85vh;
   }
-  
+
   .popup-footer {
     flex-direction: column-reverse;
     gap: 10px;
     align-items: flex-start;
     padding-bottom: 15px;
   }
-  
+
   .popup-actions {
     width: 100%;
     margin-bottom: 10px;
   }
-  
+
   .mark-read-button {
     width: 100%;
     padding: 10px;
   }
-  
+
   .popup-date {
     width: 100%;
     text-align: left;
@@ -278,7 +287,7 @@ export default {
   .popup-header h2 {
     font-size: 16px;
   }
-  
+
   .popup-body {
     padding: 15px;
   }
