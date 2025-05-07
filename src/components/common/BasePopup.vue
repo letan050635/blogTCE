@@ -11,6 +11,13 @@
           <div class="popup-body">
             <div v-if="item.useHtml" class="content-text" v-html="item.content"></div>
             <div v-else class="content-text">{{ item.content }}</div>
+
+            <!-- Hiển thị file đính kèm nếu có -->
+            <AttachmentsList
+              v-if="item.hasAttachment"
+              :relatedType="relatedType"
+              :relatedId="item.id"
+            />
           </div>
           
           <div class="popup-footer">
@@ -36,8 +43,13 @@
 </template>
 
 <script>
+import AttachmentsList from '@/components/common/AttachmentsList.vue';
+
 export default {
   name: 'BasePopup',
+  components: {
+    AttachmentsList
+  },
   props: {
     item: {
       type: Object,
@@ -49,7 +61,8 @@ export default {
         date: '',
         updateDate: null,
         useHtml: false,
-        read: false
+        read: false,
+        hasAttachment: false
       })
     },
     isOpen: {
@@ -67,6 +80,11 @@ export default {
     markReadLabel: {
       type: String,
       default: 'Đánh dấu đã đọc'
+    },
+    relatedType: {
+      type: String,
+      required: true,
+      validator: value => ['notification', 'regulation'].includes(value)
     }
   },
   mounted() {

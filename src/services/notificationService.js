@@ -1,4 +1,5 @@
 import createBaseService from './baseService';
+import apiClient from './apiClient';
 
 const baseService = createBaseService('/notifications');
 
@@ -58,5 +59,49 @@ export default {
    */
   deleteNotification(id) {
     return baseService.delete(id);
+  },
+  
+  /**
+   * Upload file đính kèm cho thông báo
+   * @param {number} notificationId - ID của thông báo
+   * @param {Array} files - Danh sách file cần upload
+   * @returns {Promise<Object>} - Promise trả về kết quả upload
+   */
+  uploadAttachments: async (notificationId, files) => {
+    try {
+      const formData = new FormData();
+      formData.append('relatedType', 'notification');
+      formData.append('relatedId', notificationId);
+      
+      files.forEach(file => {
+        formData.append('files', file);
+      });
+      
+      const response = await apiClient.post('/api/files/upload', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      
+      return response.data;
+    } catch (error) {
+      console.error('Error uploading attachments:', error);
+      throw error;
+    }
+  },
+  
+  /**
+   * Lấy danh sách file đính kèm của thông báo
+   * @param {number} notificationId - ID của thông báo
+   * @returns {Promise<Array>} - Promise trả về danh sách file đính kèm
+   */
+  getAttachments: async (notificationId) => {
+    try {
+      const response = await apiClient.get(`/api/files/notification/${notificationId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error getting attachments:', error);
+      throw error;
+    }
   }
 };
