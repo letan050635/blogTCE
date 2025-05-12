@@ -79,7 +79,7 @@
         :submitText="'Lưu thông báo'"
         :loadingText="isUploading ? 'Đang tải file lên...' : 'Đang lưu...'"
         @close="closeFormDialog"
-        @submit="saveNotification"
+        @submit="debouncedSaveNotification"
       >
         <div class="form-group">
           <label for="title">Tiêu đề <span class="required">*</span></label>
@@ -152,6 +152,7 @@
           <FileUploader
             buttonText="Chọn file để tải lên"
             accept="*/*"
+            :maxFiles="5"
             :disabled="isSubmitting || isUploading"
             @files-changed="handleFilesChanged"
             ref="fileUploader"
@@ -201,6 +202,7 @@
 
 <script>
 import { ref, onMounted } from "vue";
+import { debounce } from 'lodash';
 import AdminLayout from "@/components/admin/AdminLayout.vue";
 import DataTable from "@/components/common/DataTable.vue";
 import StatusBadge from "@/components/common/StatusBadge.vue";
@@ -276,9 +278,9 @@ export default {
       isEditing,
       isSubmitting,
       formData,
-      openAddForm,
+      openAddForm: baseOpenAddForm,
       openEditForm: baseOpenEditForm,
-      closeDialog: closeFormDialog,
+      closeDialog: baseCloseDialog,
       submitForm,
     } = useFormDialog(initialFormData, {
       create: notificationService.createNotification,
@@ -298,6 +300,24 @@ export default {
       await fetchData();
     };
 
+    // Mở form thêm mới với reset file
+    const openAddForm = () => {
+      selectedFiles.value = [];
+      if (fileUploader.value) {
+        fileUploader.value.clearFiles();
+      }
+      baseOpenAddForm();
+    };
+
+    // Đóng form với cleanup
+    const closeFormDialog = () => {
+      selectedFiles.value = [];
+      if (fileUploader.value) {
+        fileUploader.value.clearFiles();
+      }
+      baseCloseDialog();
+    };
+
     // Xử lý khi file thay đổi
     const handleFilesChanged = (files) => {
       selectedFiles.value = files;
@@ -305,13 +325,12 @@ export default {
 
     // Upload file với hiển thị tiến trình
     const uploadFiles = async (notificationId) => {
-      if (selectedFiles.value.length === 0) return;
+      if (selectedFiles.value.length === 0) return true;
       
       isUploading.value = true;
       uploadProgress.value = 0;
       
       try {
-        // Sử dụng service upload với callback theo dõi tiến trình
         await notificationService.uploadAttachments(
           notificationId, 
           selectedFiles.value,
@@ -332,6 +351,7 @@ export default {
         throw error;
       } finally {
         isUploading.value = false;
+        uploadProgress.value = 0;
       }
     };
 
@@ -360,6 +380,9 @@ export default {
 
       // Reset danh sách file
       selectedFiles.value = [];
+      if (fileUploader.value) {
+        fileUploader.value.clearFiles();
+      }
 
       baseOpenEditForm(editData);
     };
@@ -376,22 +399,35 @@ export default {
         if (notificationData.updateDate && notificationData.updateDate.includes("T")) {
           notificationData.updateDate = notificationData.updateDate.split("T")[0];
         }
+
+        let notificationId;
         
-        // Lưu thông báo trước để lấy ID
-        const result = await submitForm();
-        
-        // Lấy ID từ kết quả trả về
-        const notificationId = isEditing.value ? formData.id : result.notification.id;
-        
-        // Sau khi lưu thông báo, upload file nếu có
-        if (selectedFiles.value.length > 0) {
-          try {
+        if (!isEditing.value) {
+          // Tạo mới: lưu thông báo trước, sau đó upload files
+          const result = await submitForm();
+          notificationId = result.notification.id;
+          
+          // Upload files nếu có
+          if (selectedFiles.value.length > 0) {
             await uploadFiles(notificationId);
-          } catch (uploadError) {
-            errorMessage.value = `Lưu thông báo thành công nhưng có lỗi khi tải file: ${uploadError.message}`;
-            await fetchNotifications();
-            return;
           }
+        } else {
+          // Chỉnh sửa: lưu thông báo và upload files đồng thời
+          notificationId = formData.id;
+          
+          // Tạo các promises
+          const promises = [];
+          
+          // Promise lưu thông báo
+          promises.push(submitForm());
+          
+          // Promise upload files nếu có
+          if (selectedFiles.value.length > 0) {
+            promises.push(uploadFiles(notificationId));
+          }
+          
+          // Chờ tất cả hoàn thành
+          await Promise.all(promises);
         }
         
         await fetchNotifications();
@@ -405,6 +441,12 @@ export default {
         errorMessage.value = error.message || "Không thể lưu thông báo. Vui lòng thử lại.";
       }
     };
+
+    // Debounce để tránh click nhiều lần
+    const debouncedSaveNotification = debounce(saveNotification, 1000, {
+      leading: true,
+      trailing: false
+    });
 
     const deleteNotification = async () => {
       try {
@@ -449,7 +491,7 @@ export default {
       openAddForm,
       openEditForm,
       closeFormDialog,
-      saveNotification,
+      debouncedSaveNotification,
       confirmDelete,
       closeDeleteDialog,
       deleteNotification,
