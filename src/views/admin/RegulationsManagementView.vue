@@ -77,7 +77,7 @@
         :submitText="'Lưu quy định'"
         :loadingText="isUploading ? 'Đang tải file lên...' : 'Đang lưu...'"
         @close="closeFormDialog"
-        @submit="saveRegulation"
+        @submit="debouncedSaveRegulation"
       >
         <div class="form-group">
           <label for="title">Tiêu đề <span class="required">*</span></label>
@@ -167,6 +167,7 @@
           <FileUploader
             buttonText="Chọn file để tải lên"
             accept="*/*"
+            :maxFiles="5"
             :disabled="isSubmitting || isUploading"
             @files-changed="handleFilesChanged"
             ref="fileUploader"
@@ -214,6 +215,7 @@
 
 <script>
 import { ref, onMounted } from 'vue';
+import { debounce } from 'lodash';
 import AdminLayout from '@/components/admin/AdminLayout.vue';
 import DataTable from '@/components/common/DataTable.vue';
 import StatusBadge from '@/components/common/StatusBadge.vue';
@@ -289,9 +291,9 @@ export default {
       isEditing,
       isSubmitting,
       formData,
-      openAddForm,
+      openAddForm: baseOpenAddForm,
       openEditForm: baseOpenEditForm,
-      closeDialog: closeFormDialog,
+      closeDialog: baseCloseDialog,
       submitForm
     } = useFormDialog(initialFormData, {
       create: regulationsService.createRegulation,
@@ -311,6 +313,24 @@ export default {
       await fetchData();
     };
     
+    // Mở form thêm mới với reset file
+    const openAddForm = () => {
+      selectedFiles.value = [];
+      if (fileUploader.value) {
+        fileUploader.value.clearFiles();
+      }
+      baseOpenAddForm();
+    };
+    
+    // Đóng form với cleanup
+    const closeFormDialog = () => {
+      selectedFiles.value = [];
+      if (fileUploader.value) {
+        fileUploader.value.clearFiles();
+      }
+      baseCloseDialog();
+    };
+    
     // Xử lý khi file thay đổi
     const handleFilesChanged = (files) => {
       selectedFiles.value = files;
@@ -318,13 +338,12 @@ export default {
     
     // Upload file với hiển thị tiến trình
     const uploadFiles = async (regulationId) => {
-      if (selectedFiles.value.length === 0) return;
+      if (selectedFiles.value.length === 0) return true;
       
       isUploading.value = true;
       uploadProgress.value = 0;
       
       try {
-        // Sử dụng service upload với callback theo dõi tiến trình
         await regulationsService.uploadAttachments(
           regulationId, 
           selectedFiles.value,
@@ -345,6 +364,7 @@ export default {
         throw error;
       } finally {
         isUploading.value = false;
+        uploadProgress.value = 0;
       }
     };
     
@@ -371,6 +391,9 @@ export default {
       
       // Reset danh sách file
       selectedFiles.value = [];
+      if (fileUploader.value) {
+        fileUploader.value.clearFiles();
+      }
       
       baseOpenEditForm(editData);
     };
@@ -388,21 +411,34 @@ export default {
           regulationData.updateDate = regulationData.updateDate.split('T')[0];
         }
         
-        // Lưu quy định trước để lấy ID
-        const result = await submitForm();
+        let regulationId;
         
-        // Lấy ID từ kết quả trả về
-        const regulationId = isEditing.value ? formData.id : result.regulation.id;
-        
-        // Sau khi lưu quy định, upload file nếu có
-        if (selectedFiles.value.length > 0) {
-          try {
+        if (!isEditing.value) {
+          // Tạo mới: lưu quy định trước, sau đó upload files
+          const result = await submitForm();
+          regulationId = result.regulation.id;
+          
+          // Upload files nếu có
+          if (selectedFiles.value.length > 0) {
             await uploadFiles(regulationId);
-          } catch (uploadError) {
-            errorMessage.value = `Lưu quy định thành công nhưng có lỗi khi tải file: ${uploadError.message}`;
-            await fetchRegulations();
-            return;
           }
+        } else {
+          // Chỉnh sửa: lưu quy định và upload files đồng thời
+          regulationId = formData.id;
+          
+          // Tạo các promises
+          const promises = [];
+          
+          // Promise lưu quy định
+          promises.push(submitForm());
+          
+          // Promise upload files nếu có
+          if (selectedFiles.value.length > 0) {
+            promises.push(uploadFiles(regulationId));
+          }
+          
+          // Chờ tất cả hoàn thành
+          await Promise.all(promises);
         }
         
         await fetchRegulations();
@@ -416,6 +452,12 @@ export default {
         errorMessage.value = error.message || 'Không thể lưu quy định. Vui lòng thử lại.';
       }
     };
+    
+    // Debounce để tránh click nhiều lần
+    const debouncedSaveRegulation = debounce(saveRegulation, 1000, {
+      leading: true,
+      trailing: false
+    });
     
     const deleteRegulation = async () => {
       try {
@@ -459,7 +501,7 @@ export default {
       openAddForm,
       openEditForm,
       closeFormDialog,
-      saveRegulation,
+      debouncedSaveRegulation,
       confirmDelete,
       closeDeleteDialog,
       deleteRegulation,

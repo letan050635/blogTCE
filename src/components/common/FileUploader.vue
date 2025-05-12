@@ -62,7 +62,7 @@ export default {
     },
     inputId: {
       type: String,
-      default: `file-upload-${Date.now()}` // Generate unique ID
+      default: () => `file-upload-${Date.now()}` // Generate unique ID
     },
     disabled: {
       type: Boolean,
@@ -80,46 +80,54 @@ export default {
       this.error = null;
       const newFiles = Array.from(event.target.files);
       
+      // Reset file list cũ trước khi thêm mới để tránh duplicate
+      this.files = [];
+      
       // Kiểm tra số lượng file
-      if (this.files.length + newFiles.length > this.maxFiles) {
+      if (newFiles.length > this.maxFiles) {
         this.error = `Chỉ được phép tải lên tối đa ${this.maxFiles} file`;
+        event.target.value = '';
         return;
       }
       
+      // Kiểm tra duplicate file names trong batch hiện tại
+      const fileNames = new Set();
+      for (const file of newFiles) {
+        if (fileNames.has(file.name)) {
+          this.error = `File trùng lặp trong lần chọn: ${file.name}`;
+          event.target.value = '';
+          return;
+        }
+        fileNames.add(file.name);
+      }
+      
       // Kiểm tra kích thước và loại file
+      const validFiles = [];
+      
       for (const file of newFiles) {
         if (file.size > this.maxSize) {
           this.error = `File "${file.name}" vượt quá kích thước cho phép (${this.formatFileSize(this.maxSize)})`;
+          event.target.value = '';
           return;
         }
         
         if (this.accept !== '*/*' && !this.isFileTypeAllowed(file)) {
           this.error = `File "${file.name}" không đúng định dạng cho phép`;
+          event.target.value = '';
           return;
         }
+        
+        validFiles.push(file);
       }
       
-      // Kiểm tra duplicate file names
-      const existingFileNames = this.files.map(f => f.name);
-      const duplicates = newFiles.filter(file => existingFileNames.includes(file.name));
+      // Thêm files vào danh sách
+      this.files = validFiles;
       
-      if (duplicates.length > 0) {
-        this.error = `File đã tồn tại: ${duplicates.map(f => f.name).join(', ')}`;
-        return;
-      }
-      
-      // Thêm files mới vào danh sách
-      this.files = [...this.files, ...newFiles];
-      
-      // Emit event chỉ một lần
+      // Emit event CHỈ MỘT LẦN với tất cả files
       this.$emit('files-changed', this.files);
       
-      // Reset input để có thể chọn lại file đã chọn trước đó
-      this.$nextTick(() => {
-        if (this.$refs.fileInput) {
-          this.$refs.fileInput.value = '';
-        }
-      });
+      // Reset input value để có thể chọn lại cùng file
+      event.target.value = '';
     },
     
     isFileTypeAllowed(file) {
@@ -160,6 +168,10 @@ export default {
       }
       this.$emit('files-changed', this.files);
     }
+  },
+  beforeUnmount() {
+    // Cleanup khi component bị destroy
+    this.clearFiles();
   }
 }
 </script>
