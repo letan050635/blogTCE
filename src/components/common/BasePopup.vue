@@ -14,9 +14,12 @@
 
             <!-- Hiển thị file đính kèm nếu có -->
             <AttachmentsList
-              v-if="item.hasAttachment"
+              v-if="item.hasAttachment && relatedType"
               :relatedType="relatedType"
               :relatedId="item.id"
+              :isAdmin="false"
+              title="File đính kèm"
+              noAttachmentsText="Không có file đính kèm"
             />
           </div>
           
@@ -92,6 +95,13 @@ export default {
     if (this.isOpen) {
       document.body.style.overflow = 'hidden';
     }
+    
+    // Log để debug
+    console.log('BasePopup mounted:', {
+      itemId: this.item.id,
+      hasAttachment: this.item.hasAttachment,
+      relatedType: this.relatedType
+    });
   },
   beforeUnmount() {
     document.removeEventListener('keydown', this.handleKeyDown);

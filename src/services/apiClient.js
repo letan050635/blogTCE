@@ -2,20 +2,25 @@ import axios from "axios";
 
 const apiClient = axios.create({
   baseURL: process.env.VUE_APP_API_BASE_URL || "http://localhost:5000/api",
-  headers: {
-    "Content-Type": "application/json",
-  },
   timeout: 10000,
 });
 
 apiClient.interceptors.request.use(
   (config) => {
+    // Nếu request là multipart/form-data, không cài đặt Content-Type
+    if (config.data instanceof FormData) {
+      delete config.headers['Content-Type'];
+    } else {
+      config.headers["Content-Type"] = "application/json";
+    }
+
     const isAdminRoute =
       config.url.includes("/admin/") ||
       (config.url.includes("/auth/users") &&
         (config.method !== "get" || config.url !== "/auth/users/me")) ||
       ((config.url.includes("/notifications") ||
-        config.url.includes("/regulations")) &&
+        config.url.includes("/regulations") ||
+        config.url.includes("/files")) &&
         (config.method === "post" ||
           config.method === "put" ||
           config.method === "delete") &&
@@ -55,7 +60,8 @@ apiClient.interceptors.response.use(
         (error.config.url.includes("/auth/users") &&
           error.config.url !== "/auth/users/me") ||
         ((error.config.url.includes("/notifications/") ||
-          error.config.url.includes("/regulations/")) &&
+          error.config.url.includes("/regulations/") ||
+          error.config.url.includes("/files/")) &&
           (error.config.method === "post" ||
             error.config.method === "put" ||
             error.config.method === "delete"));

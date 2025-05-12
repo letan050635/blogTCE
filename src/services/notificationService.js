@@ -65,9 +65,10 @@ export default {
    * Upload file đính kèm cho thông báo
    * @param {number} notificationId - ID của thông báo
    * @param {Array} files - Danh sách file cần upload
+   * @param {Function} progressCallback - Callback theo dõi tiến trình upload
    * @returns {Promise<Object>} - Promise trả về kết quả upload
    */
-  uploadAttachments: async (notificationId, files) => {
+  uploadAttachments: async (notificationId, files, progressCallback = null) => {
     try {
       const formData = new FormData();
       formData.append('relatedType', 'notification');
@@ -77,12 +78,24 @@ export default {
         formData.append('files', file);
       });
       
-      const response = await apiClient.post('/api/files/upload', formData, {
+      const config = {
         headers: {
-          'Content-Type': 'multipart/form-data'
+          // Không cần chỉ định Content-Type khi gửi FormData
+          // apiClient sẽ tự động xử lý
         }
-      });
+      };
       
+      // Thêm theo dõi tiến trình nếu có callback
+      if (progressCallback && typeof progressCallback === 'function') {
+        config.onUploadProgress = (progressEvent) => {
+          const percentCompleted = Math.round(
+            (progressEvent.loaded * 100) / progressEvent.total
+          );
+          progressCallback(percentCompleted);
+        };
+      }
+      
+      const response = await apiClient.post('/files/upload', formData, config);
       return response.data;
     } catch (error) {
       console.error('Error uploading attachments:', error);
@@ -97,10 +110,25 @@ export default {
    */
   getAttachments: async (notificationId) => {
     try {
-      const response = await apiClient.get(`/api/files/notification/${notificationId}`);
+      const response = await apiClient.get(`/files/notification/${notificationId}`);
       return response.data;
     } catch (error) {
       console.error('Error getting attachments:', error);
+      throw error;
+    }
+  },
+  
+  /**
+   * Xóa file đính kèm
+   * @param {number} fileId - ID của file
+   * @returns {Promise<Object>} - Promise trả về kết quả xóa
+   */
+  deleteAttachment: async (fileId) => {
+    try {
+      const response = await apiClient.delete(`/files/${fileId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error deleting attachment:', error);
       throw error;
     }
   }

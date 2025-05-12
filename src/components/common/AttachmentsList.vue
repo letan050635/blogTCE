@@ -1,4 +1,3 @@
-// src/components/common/AttachmentsList.vue
 <template>
   <div class="attachments-list">
     <h4 v-if="title" class="attachments-title">{{ title }}</h4>
@@ -42,6 +41,8 @@
 </template>
 
 <script>
+import apiClient from '@/services/apiClient';
+
 export default {
   name: 'AttachmentsList',
   props: {
@@ -87,7 +88,7 @@ export default {
       this.isLoading = true;
       
       try {
-        const response = await this.$axios.get(`/api/files/${this.relatedType}/${this.relatedId}`);
+        const response = await apiClient.get(`/files/${this.relatedType}/${this.relatedId}`);
         this.attachments = response.data;
       } catch (error) {
         console.error('Error fetching attachments:', error);
@@ -102,7 +103,7 @@ export default {
       this.isDeleting = id;
       
       try {
-        await this.$axios.delete(`/api/files/${id}`);
+        await apiClient.delete(`/files/${id}`);
         this.attachments = this.attachments.filter(att => att.id !== id);
         this.$emit('attachment-deleted', id);
       } catch (error) {
