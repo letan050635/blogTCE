@@ -1,4 +1,3 @@
-<!-- views/admin/RegulationsManagementView.vue -->
 <template>
   <AdminLayout>
     <div class="regulations-management">
@@ -74,9 +73,9 @@
       <DialogForm
         :show="showFormDialog"
         :title="isEditing ? 'Sửa quy định' : 'Thêm quy định mới'"
-        :submitDisabled="isSubmitting"
+        :submitDisabled="isSubmitting || isUploading"
         :submitText="'Lưu quy định'"
-        :loadingText="'Đang lưu...'"
+        :loadingText="isUploading ? 'Đang tải file lên...' : 'Đang lưu...'"
         @close="closeFormDialog"
         @submit="saveRegulation"
       >
@@ -168,9 +167,23 @@
           <FileUploader
             buttonText="Chọn file để tải lên"
             accept="*/*"
-            :disabled="isSubmitting"
+            :disabled="isSubmitting || isUploading"
             @files-changed="handleFilesChanged"
+            ref="fileUploader"
           />
+        </div>
+        
+        <!-- Hiển thị trạng thái upload file -->
+        <div v-if="isUploading" class="upload-progress">
+          <div class="progress-bar">
+            <div 
+              class="progress-bar-inner" 
+              :style="{ width: `${uploadProgress}%` }"
+            ></div>
+          </div>
+          <div class="progress-text">
+            Đang tải file lên... {{ uploadProgress }}%
+          </div>
         </div>
         
         <!-- Hiển thị danh sách file đính kèm khi chỉnh sửa -->
@@ -200,8 +213,7 @@
 </template>
 
 <script>
-// eslint-disable-next-line no-unused-vars
-import { ref, reactive, onMounted } from 'vue';
+import { ref, onMounted } from 'vue';
 import AdminLayout from '@/components/admin/AdminLayout.vue';
 import DataTable from '@/components/common/DataTable.vue';
 import StatusBadge from '@/components/common/StatusBadge.vue';
@@ -216,7 +228,6 @@ import regulationsService from '@/services/regulationsService';
 import useList from '@/composables/useList';
 import useFormDialog from '@/composables/useFormDialog';
 import useDeleteDialog from '@/composables/useDeleteDialog';
-import axios from 'axios';
 
 export default {
   name: 'RegulationsManagementView',
@@ -255,6 +266,9 @@ export default {
     ];
     
     const selectedFiles = ref([]);
+    const fileUploader = ref(null);
+    const isUploading = ref(false);
+    const uploadProgress = ref(0);
     
     const {
       isLoading,
@@ -302,6 +316,38 @@ export default {
       selectedFiles.value = files;
     };
     
+    // Upload file với hiển thị tiến trình
+    const uploadFiles = async (regulationId) => {
+      if (selectedFiles.value.length === 0) return;
+      
+      isUploading.value = true;
+      uploadProgress.value = 0;
+      
+      try {
+        // Sử dụng service upload với callback theo dõi tiến trình
+        await regulationsService.uploadAttachments(
+          regulationId, 
+          selectedFiles.value,
+          (progress) => {
+            uploadProgress.value = progress;
+          }
+        );
+        
+        // Reset file uploader sau khi upload thành công
+        if (fileUploader.value) {
+          fileUploader.value.clearFiles();
+        }
+        selectedFiles.value = [];
+        
+        return true;
+      } catch (error) {
+        console.error('Error uploading files:', error);
+        throw error;
+      } finally {
+        isUploading.value = false;
+      }
+    };
+    
     // Mở form sửa với xử lý đặc biệt cho dates
     const openEditForm = (regulation) => {
       const formatDate = (dateStr) => {
@@ -342,23 +388,21 @@ export default {
           regulationData.updateDate = regulationData.updateDate.split('T')[0];
         }
         
-        const result = await submitForm(regulationData);
+        // Lưu quy định trước để lấy ID
+        const result = await submitForm();
+        
+        // Lấy ID từ kết quả trả về
+        const regulationId = isEditing.value ? formData.id : result.regulation.id;
         
         // Sau khi lưu quy định, upload file nếu có
         if (selectedFiles.value.length > 0) {
-          const fileFormData = new FormData();
-          fileFormData.append('relatedType', 'regulation');
-          fileFormData.append('relatedId', isEditing.value ? formData.id : result.regulation.id);
-          
-          selectedFiles.value.forEach(file => {
-            fileFormData.append('files', file);
-          });
-          
-          await axios.post('/api/files/upload', fileFormData, {
-            headers: {
-              'Content-Type': 'multipart/form-data'
-            }
-          });
+          try {
+            await uploadFiles(regulationId);
+          } catch (uploadError) {
+            errorMessage.value = `Lưu quy định thành công nhưng có lỗi khi tải file: ${uploadError.message}`;
+            await fetchRegulations();
+            return;
+          }
         }
         
         await fetchRegulations();
@@ -406,6 +450,9 @@ export default {
       isDeleting,
       selectedRegulation,
       selectedFiles,
+      fileUploader,
+      isUploading,
+      uploadProgress,
       fetchRegulations,
       changePage,
       handleSearch,
@@ -425,4 +472,29 @@ export default {
 <style scoped>
 @import '@/assets/styles/admin.css';
 @import '@/assets/styles/form.css';
+
+.upload-progress {
+  margin-top: 10px;
+  margin-bottom: 20px;
+}
+
+.progress-bar {
+  height: 10px;
+  background-color: #f1f1f1;
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.progress-bar-inner {
+  height: 100%;
+  background-color: #0066b3;
+  transition: width 0.3s ease;
+}
+
+.progress-text {
+  margin-top: 5px;
+  font-size: 12px;
+  color: #666;
+  text-align: center;
+}
 </style>

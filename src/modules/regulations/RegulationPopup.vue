@@ -5,6 +5,7 @@
     dateLabel="Đăng"
     updateLabel="Cập nhật"
     markReadLabel="Đánh dấu đã đọc"
+    relatedType="regulation"
     @close="$emit('close')"
     @mark-read="$emit('mark-read', regulation.id)"
   />
@@ -29,7 +30,8 @@ export default {
         date: '',
         updateDate: null,
         useHtml: false,
-        read: false
+        read: false,
+        hasAttachment: false
       })
     },
     isOpen: {
