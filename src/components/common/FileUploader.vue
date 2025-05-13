@@ -18,6 +18,9 @@
     </div>
     
     <div v-if="files.length > 0" class="file-list">
+      <div class="file-info-note">
+        <span>Tối đa 5 file, mỗi file không quá 50MB</span>
+      </div>
       <div v-for="(file, index) in files" :key="`${file.name}-${index}`" class="file-item">
         <div class="file-info">
           <div class="file-name">{{ file.name }}</div>
@@ -54,7 +57,7 @@ export default {
     },
     maxSize: {
       type: Number,
-      default: 5 * 1024 * 1024 // 5MB by default
+      default: 50 * 1024 * 1024 // 50MB by default
     },
     maxFiles: {
       type: Number,
@@ -223,6 +226,15 @@ export default {
   border: 1px solid #eee;
   border-radius: 4px;
   overflow: hidden;
+}
+
+.file-info-note {
+  padding: 8px 12px;
+  background-color: #f5f5f5;
+  border-bottom: 1px solid #eee;
+  font-size: 12px;
+  color: #666;
+  text-align: center;
 }
 
 .file-item {
