@@ -78,6 +78,7 @@
         :loadingText="isUploading ? 'Đang tải file lên...' : 'Đang lưu...'"
         @close="closeFormDialog"
         @submit="debouncedSaveRegulation"
+        large
       >
         <div class="form-group">
           <label for="title">Tiêu đề <span class="required">*</span></label>
@@ -102,13 +103,11 @@
         
         <div class="form-group">
           <label for="content">Nội dung <span class="required">*</span></label>
-          <textarea 
-            id="content" 
-            v-model="formData.content" 
-            rows="10" 
-            required
-            placeholder="Nhập nội dung quy định"
-          ></textarea>
+          <RichTextEditor
+            v-model="formData.content"
+            :min-height="400"
+            placeholder="Nhập nội dung quy định..."
+          />
         </div>
         
         <div class="form-row">
@@ -150,18 +149,9 @@
             />
             <label for="isImportant">Đánh dấu là quan trọng</label>
           </div>
-          
-          <div class="form-group form-checkbox">
-            <input 
-              type="checkbox" 
-              id="useHtml" 
-              v-model="formData.useHtml" 
-            />
-            <label for="useHtml">Sử dụng HTML</label>
-          </div>
         </div>
         
-        <!-- Thêm phần upload file -->
+        <!-- File upload section -->
         <div class="form-group">
           <label>File đính kèm</label>
           <FileUploader
@@ -174,7 +164,7 @@
           />
         </div>
         
-        <!-- Hiển thị trạng thái upload file -->
+        <!-- Upload progress -->
         <div v-if="isUploading" class="upload-progress">
           <div class="progress-bar">
             <div 
@@ -187,7 +177,7 @@
           </div>
         </div>
         
-        <!-- Hiển thị danh sách file đính kèm khi chỉnh sửa -->
+        <!-- Current attachments when editing -->
         <AttachmentsList
           v-if="isEditing && formData.id"
           relatedType="regulation"
@@ -225,6 +215,7 @@ import DialogForm from '@/components/common/DialogForm.vue';
 import DialogConfirm from '@/components/common/DialogConfirm.vue';
 import FileUploader from '@/components/common/FileUploader.vue';
 import AttachmentsList from '@/components/common/AttachmentsList.vue';
+import RichTextEditor from '@/components/admin/RichTextEditor.vue';
 
 import regulationsService from '@/services/regulationsService';
 import useList from '@/composables/useList';
@@ -242,7 +233,8 @@ export default {
     DialogForm,
     DialogConfirm,
     FileUploader,
-    AttachmentsList
+    AttachmentsList,
+    RichTextEditor
   },
   setup() {
     const initialFormData = {
@@ -254,7 +246,7 @@ export default {
       updateDate: '',
       isNew: true,
       isImportant: false,
-      useHtml: true
+      useHtml: true // Always true when using editor
     };
     
     const columns = [
@@ -313,7 +305,6 @@ export default {
       await fetchData();
     };
     
-    // Mở form thêm mới với reset file
     const openAddForm = () => {
       selectedFiles.value = [];
       if (fileUploader.value) {
@@ -322,7 +313,6 @@ export default {
       baseOpenAddForm();
     };
     
-    // Đóng form với cleanup
     const closeFormDialog = () => {
       selectedFiles.value = [];
       if (fileUploader.value) {
@@ -331,12 +321,10 @@ export default {
       baseCloseDialog();
     };
     
-    // Xử lý khi file thay đổi
     const handleFilesChanged = (files) => {
       selectedFiles.value = files;
     };
     
-    // Upload file với hiển thị tiến trình
     const uploadFiles = async (regulationId) => {
       if (selectedFiles.value.length === 0) return true;
       
@@ -352,7 +340,6 @@ export default {
           }
         );
         
-        // Reset file uploader sau khi upload thành công
         if (fileUploader.value) {
           fileUploader.value.clearFiles();
         }
@@ -368,15 +355,12 @@ export default {
       }
     };
     
-    // Mở form sửa với xử lý đặc biệt cho dates
     const openEditForm = (regulation) => {
       const formatDate = (dateStr) => {
         if (!dateStr) return '';
-        // Check if already in YYYY-MM-DD format
         if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
           return dateStr;
         }
-        // Convert DD/MM/YYYY to YYYY-MM-DD
         const parts = dateStr.split('/');
         if (parts.length === 3) {
           return `${parts[2]}-${parts[1]}-${parts[0]}`;
@@ -384,12 +368,10 @@ export default {
         return dateStr;
       };
       
-      // Clone regulation để có thể chỉnh sửa trước khi truyền vào
       const editData = { ...regulation };
       editData.date = formatDate(editData.date);
       editData.updateDate = editData.updateDate ? formatDate(editData.updateDate) : '';
       
-      // Reset danh sách file
       selectedFiles.value = [];
       if (fileUploader.value) {
         fileUploader.value.clearFiles();
@@ -400,10 +382,15 @@ export default {
     
     const saveRegulation = async () => {
       try {
-        // Format dates for API
+        // Validate content
+        if (!formData.content || formData.content === '<p><br></p>') {
+          errorMessage.value = 'Nội dung không được để trống';
+          return;
+        }
+
         const regulationData = { ...formData };
+        regulationData.useHtml = true; // Always use HTML with editor
         
-        // Loại bỏ thời gian từ date nếu có
         if (regulationData.date && regulationData.date.includes('T')) {
           regulationData.date = regulationData.date.split('T')[0];
         }
@@ -414,30 +401,22 @@ export default {
         let regulationId;
         
         if (!isEditing.value) {
-          // Tạo mới: lưu quy định trước, sau đó upload files
           const result = await submitForm();
           regulationId = result.regulation.id;
           
-          // Upload files nếu có
           if (selectedFiles.value.length > 0) {
             await uploadFiles(regulationId);
           }
         } else {
-          // Chỉnh sửa: lưu quy định và upload files đồng thời
           regulationId = formData.id;
           
-          // Tạo các promises
           const promises = [];
-          
-          // Promise lưu quy định
           promises.push(submitForm());
           
-          // Promise upload files nếu có
           if (selectedFiles.value.length > 0) {
             promises.push(uploadFiles(regulationId));
           }
           
-          // Chờ tất cả hoàn thành
           await Promise.all(promises);
         }
         
@@ -453,7 +432,6 @@ export default {
       }
     };
     
-    // Debounce để tránh click nhiều lần
     const debouncedSaveRegulation = debounce(saveRegulation, 1000, {
       leading: true,
       trailing: false
@@ -538,5 +516,25 @@ export default {
   font-size: 12px;
   color: #666;
   text-align: center;
+}
+
+/* Custom styles for editor form */
+.dialog-form .form-group label {
+  font-family: 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+  font-weight: 500;
+}
+
+.dialog-form input,
+.dialog-form textarea {
+  font-family: 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+}
+
+.checkbox-group {
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.form-checkbox label {
+  font-family: 'Roboto', 'Helvetica Neue', Arial, sans-serif;
 }
 </style>
