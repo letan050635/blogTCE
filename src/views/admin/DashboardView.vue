@@ -337,20 +337,17 @@ export default {
       isLoading.value = true;
       
       try {
-        // Fetch all notifications
         const notificationsResult = await notificationService.getNotifications({
           page: 1,
           limit: 10
         });
         
-        // Filter notifications
         recentNotifications.value = notificationsResult.data.slice(0, 5);
         importantNotifications.value = notificationsResult.data
           .filter(n => n.isImportant)
           .slice(0, 5);
         stats.notificationsCount = notificationsResult.pagination.total;
         
-        // Fetch all regulations
         const regulationsResult = await regulationsService.getRegulations({
           page: 1,
           limit: 10

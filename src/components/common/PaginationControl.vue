@@ -1,4 +1,3 @@
-<!-- components/common/PaginationControl.vue -->
 <template>
     <div class="pagination-container" v-if="totalPages > 1">
       <div class="pagination-controls">

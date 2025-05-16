@@ -25,7 +25,7 @@
         </div>
         
         <div class="footer-bottom">
-          <p>&copy; {{ currentYear }} TCE-EMS.COM - Bản quyền thuộc về TCE.</p>
+          <p>&copy; {{ currentYear }} TCE-EMS.COM </p>
         </div>
       </div>
     </footer>

@@ -4,7 +4,7 @@
       <div class="container header-container">
         <div class="logo">
           <router-link to="/admin">
-            <h2>TCE-EMS Admin</h2>
+            <h2><img src="../../assets/images/logo.png"></h2>
           </router-link>
         </div>
         

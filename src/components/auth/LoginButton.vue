@@ -55,6 +55,7 @@ export default {
     },
     
     checkLoginStatus() {
+      // eslint-disable-next-line no-unused-vars
       const wasLoggedIn = this.isLoggedIn;
       this.isLoggedIn = authService.isLoggedIn();
       
@@ -62,10 +63,6 @@ export default {
         this.user = authService.getCurrentUser() || {};
       } else {
         this.user = {};
-      }
-      
-      if (wasLoggedIn !== this.isLoggedIn) {
-        //console.log('LoginButton: Login state changed', this.isLoggedIn);
       }
     }
   },

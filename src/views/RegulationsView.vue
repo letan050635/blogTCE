@@ -7,7 +7,6 @@
         <div class="main-content">
           <RegulationsList />
         </div>
-        <!-- Sidebar bên phải - chỉ giữ lại phần quy định quan trọng -->
         <div class="sidebar">
           <div class="sidebar-widget">
             <h3>Quy định quan trọng</h3>
