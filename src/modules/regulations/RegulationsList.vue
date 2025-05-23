@@ -1,4 +1,3 @@
-<!-- modules/regulations/RegulationsList.vue -->
 <template>
   <div class="regulations-container">
     <div class="regulations-header">
@@ -31,7 +30,7 @@
     <!-- Danh sách quy định -->
     <div v-else class="regulations-content">
       <RegulationItem
-        v-for="regulation in regulations"
+        v-for="regulation in getSortedRegulations"
         :key="regulation.id"
         :regulation="regulation"
         @open-popup="openRegulationPopup"
@@ -64,6 +63,20 @@
       <p>{{ error }}</p>
       <button @click="fetchRegulations" class="retry-button">Thử lại</button>
     </div>
+
+    <!-- Thêm dropdown hoặc button để chọn trường sort (id, title, date) và chiều sort (tăng/giảm) -->
+    <div class="sort-controls">
+      <select v-model="sortBy" @change="handleSort">
+        <option value="">Sắp xếp</option>
+        <option value="id">ID</option>
+        <option value="title">Tiêu đề</option>
+        <option value="date">Ngày</option>
+      </select>
+      <select v-model="sortOrder" @change="handleSort">
+        <option value="asc">Tăng dần</option>
+        <option value="desc">Giảm dần</option>
+      </select>
+    </div>
   </div>
 </template>
   
@@ -93,6 +106,8 @@ export default {
       totalPages: 0,
       isLoading: false,
       error: null,
+      sortBy: '',
+      sortOrder: 'asc',
     };
   },
   computed: {
@@ -109,6 +124,24 @@ export default {
     // Thêm computed property để kiểm tra đăng nhập
     isLoggedIn() {
       return authService.isLoggedIn();
+    },
+    getSortedRegulations() {
+      if (!this.sortBy) return this.regulations;
+      return [...this.regulations].sort((a, b) => {
+        let valA = a[this.sortBy];
+        let valB = b[this.sortBy];
+        if (this.sortBy === 'id') {
+          valA = Number(valA);
+          valB = Number(valB);
+        }
+        if (this.sortBy === 'date') {
+          valA = new Date(valA);
+          valB = new Date(valB);
+        }
+        if (valA < valB) return this.sortOrder === 'asc' ? -1 : 1;
+        if (valA > valB) return this.sortOrder === 'asc' ? 1 : -1;
+        return 0;
+      });
     }
   },
   methods: {
@@ -226,6 +259,16 @@ export default {
       if (this.currentPage !== page) {
         this.currentPage = page;
         this.fetchRegulations();
+      }
+    },
+
+    handleSort(field) {
+      if (!['id', 'title', 'date'].includes(field)) return;
+      if (this.sortBy === field) {
+        this.sortOrder = this.sortOrder === 'asc' ? 'desc' : 'asc';
+      } else {
+        this.sortBy = field;
+        this.sortOrder = 'asc';
       }
     },
   },

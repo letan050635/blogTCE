@@ -30,10 +30,13 @@
       <DataTable
         v-else
         :columns="columns"
-        :data="notifications"
+        :data="getSortedNotifications"
         :currentPage="currentPage"
         :totalPages="totalPages"
+        :sortBy="sortBy"
+        :sortOrder="sortOrder"
         @page-change="changePage"
+        @sort="handleSort"
       >
         <template #isNew="{ row }">
           <StatusBadge
@@ -195,7 +198,7 @@
 </template>
 
 <script>
-import { ref, onMounted } from "vue";
+import { ref, onMounted, computed } from "vue";
 import { debounce } from 'lodash';
 import AdminLayout from "@/components/admin/AdminLayout.vue";
 import DataTable from "@/components/common/DataTable.vue";
@@ -358,18 +361,18 @@ export default {
         }
         return dateStr;
       };
-
+      
       const editData = { ...notification };
+      editData.isNew = Boolean(editData.isNew);
+      editData.isImportant = Boolean(editData.isImportant);
       editData.date = formatDate(editData.date);
-      editData.updateDate = editData.updateDate
-        ? formatDate(editData.updateDate)
-        : "";
-
+      editData.updateDate = editData.updateDate ? formatDate(editData.updateDate) : '';
+      
       selectedFiles.value = [];
       if (fileUploader.value) {
         fileUploader.value.clearFiles();
       }
-
+      
       baseOpenEditForm(editData);
     };
 
@@ -382,13 +385,16 @@ export default {
         }
 
         const notificationData = { ...formData };
+        // Đảm bảo các trường boolean được chuyển đổi đúng
+        notificationData.isNew = Boolean(notificationData.isNew);
+        notificationData.isImportant = Boolean(notificationData.isImportant);
         notificationData.useHtml = true; // Always use HTML with editor
         
-        if (notificationData.date && notificationData.date.includes("T")) {
-          notificationData.date = notificationData.date.split("T")[0];
+        if (notificationData.date && notificationData.date.includes('T')) {
+          notificationData.date = notificationData.date.split('T')[0];
         }
-        if (notificationData.updateDate && notificationData.updateDate.includes("T")) {
-          notificationData.updateDate = notificationData.updateDate.split("T")[0];
+        if (notificationData.updateDate && notificationData.updateDate.includes('T')) {
+          notificationData.updateDate = notificationData.updateDate.split('T')[0];
         }
 
         let notificationId;
@@ -443,6 +449,39 @@ export default {
       }
     };
 
+    const sortBy = ref('');
+    const sortOrder = ref('asc');
+
+    const handleSort = (field) => {
+      if (!['id', 'title', 'date'].includes(field)) return;
+      if (sortBy.value === field) {
+        sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc';
+      } else {
+        sortBy.value = field;
+        sortOrder.value = 'asc';
+      }
+    };
+
+    const getSortedNotifications = computed(() => {
+      if (!sortBy.value) return notifications.value;
+      return [...notifications.value].sort((a, b) => {
+        let valA = a[sortBy.value];
+        let valB = b[sortBy.value];
+        // So sánh số hoặc ngày
+        if (sortBy.value === 'id') {
+          valA = Number(valA);
+          valB = Number(valB);
+        }
+        if (sortBy.value === 'date') {
+          valA = new Date(valA);
+          valB = new Date(valB);
+        }
+        if (valA < valB) return sortOrder.value === 'asc' ? -1 : 1;
+        if (valA > valB) return sortOrder.value === 'asc' ? 1 : -1;
+        return 0;
+      });
+    });
+
     onMounted(() => {
       fetchNotifications();
     });
@@ -478,6 +517,10 @@ export default {
       closeDeleteDialog,
       deleteNotification,
       handleFilesChanged,
+      sortBy,
+      sortOrder,
+      handleSort,
+      getSortedNotifications,
     };
   },
 };

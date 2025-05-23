@@ -68,53 +68,27 @@
       :style="{ minHeight: minHeight + 'px' }"
     ></div>
     
-    <!-- Link Dialog -->
-    <div v-if="showLinkDialog" class="link-dialog-overlay" @click.self="closeLinkDialog">
-      <div class="link-dialog">
-        <div class="link-dialog-header">
-          <h3>Chèn Link</h3>
-          <button class="close-btn" @click="closeLinkDialog">&times;</button>
-        </div>
-        <div class="link-dialog-body">
-          <div class="form-group">
-            <label>Văn bản hiển thị:</label>
-            <input 
-              v-model="linkForm.text" 
-              type="text" 
-              placeholder="Nhập văn bản hiển thị"
-              @keyup.enter="insertLink"
-            />
-          </div>
-          <div class="form-group">
-            <label>URL:</label>
-            <input 
-              v-model="linkForm.url" 
-              type="text" 
-              placeholder="https://example.com"
-              @keyup.enter="insertLink"
-            />
-          </div>
-          <div class="form-group checkbox">
-            <label>
-              <input v-model="linkForm.newTab" type="checkbox" />
-              Mở trong tab mới
-            </label>
-          </div>
-        </div>
-        <div class="link-dialog-footer">
-          <button class="cancel-btn" @click="closeLinkDialog">Hủy</button>
-          <button class="insert-btn" @click="insertLink">Chèn Link</button>
-        </div>
-      </div>
-    </div>
+    <LinkDialog
+      v-if="showLinkDialog"
+      v-model:show="showLinkDialog"
+      v-model:form="linkForm"
+      @insert="insertLink"
+      @close="closeLinkDialog"
+    />
   </div>
 </template>
 
 <script>
 import { ref, onMounted, watch, nextTick } from 'vue';
+import { useQuillEditor } from './composables/useQuillEditor';
+import { useLinkDialog } from './composables/useLinkDialog';
+import LinkDialog from './LinkDialog.vue';
 
 export default {
   name: 'RichTextEditor',
+  components: {
+    LinkDialog
+  },
   props: {
     modelValue: {
       type: String,
@@ -132,122 +106,31 @@ export default {
   emits: ['update:modelValue'],
   setup(props, { emit }) {
     const editor = ref(null);
-    const showLinkDialog = ref(false);
-    const linkForm = ref({
-      text: '',
-      url: '',
-      newTab: true
-    });
-    let quill = null;
-    let isInternalUpdate = false;
-    let savedSelection = null;
     
-    // Initialize Quill
-    const initQuill = async () => {
-      // Import Quill động để tránh lỗi SSR
-      const Quill = (await import('quill')).default;
-      
-      // Custom size attribute
-      const Size = Quill.import('attributors/style/size');
-      Size.whitelist = ['10px', '12px', '14px', '16px', '18px', '20px', '24px', '28px', '32px', '36px', '48px', '72px'];
-      Quill.register(Size, true);
-      
-      // Font families
-      const Font = Quill.import('formats/font');
-      Font.whitelist = ['arial', 'times', 'tahoma', 'verdana', 'georgia'];
-      Quill.register(Font, true);
-      
-      // Create Quill instance
-      quill = new Quill(editor.value, {
-        theme: 'snow',
-        placeholder: props.placeholder,
-        modules: {
-          toolbar: {
-            container: '#toolbar',
-            handlers: {
-              link: () => {
-                const range = quill.getSelection();
-                if (range) {
-                  savedSelection = range;
-                  const selectedText = quill.getText(range.index, range.length);
-                  linkForm.value.text = selectedText;
-                  linkForm.value.url = '';
-                  showLinkDialog.value = true;
-                }
-              }
-            }
-          }
-        }
-      });
-      
-      // Set giá trị ban đầu
-      if (props.modelValue) {
-        quill.root.innerHTML = props.modelValue;
-      }
-      
-      // Listen for text change
-      quill.on('text-change', () => {
-        if (!isInternalUpdate) {
-          const html = quill.root.innerHTML;
-          // Chỉ emit nếu có nội dung
-          if (html === '<p><br></p>') {
-            emit('update:modelValue', '');
-          } else {
-            emit('update:modelValue', html);
-          }
-        }
-      });
-    };
+    // Tách logic editor thành composable
+    const { 
+      quill,
+      initQuill,
+      isInternalUpdate
+    } = useQuillEditor(editor, props, emit);
     
-    // Insert link
-    const insertLink = () => {
-      if (!linkForm.value.url) return;
-      
-      // Ensure URL has protocol
-      let url = linkForm.value.url;
-      if (!url.match(/^https?:\/\//)) {
-        url = 'https://' + url;
-      }
-      
-      // Insert link
-      if (savedSelection && quill) {
-        const text = linkForm.value.text || url;
-        const target = linkForm.value.newTab ? '_blank' : '_self';
-        
-        quill.deleteText(savedSelection.index, savedSelection.length);
-        quill.insertText(savedSelection.index, text, {
-          link: {
-            href: url,
-            target: target
-          }
-        });
-        
-        // Set selection after the link
-        quill.setSelection(savedSelection.index + text.length);
-      }
-      
-      closeLinkDialog();
-    };
-    
-    const closeLinkDialog = () => {
-      showLinkDialog.value = false;
-      linkForm.value = {
-        text: '',
-        url: '',
-        newTab: true
-      };
-      savedSelection = null;
-    };
+    // Tách logic link dialog thành composable
+    const {
+      showLinkDialog,
+      linkForm,
+      insertLink,
+      closeLinkDialog
+    } = useLinkDialog(quill);
     
     // Watch for external changes
     watch(() => props.modelValue, (newValue) => {
-      if (quill && !isInternalUpdate) {
-        isInternalUpdate = true;
-        if (newValue !== quill.root.innerHTML) {
-          quill.root.innerHTML = newValue || '';
+      if (quill.value && !isInternalUpdate.value) {
+        isInternalUpdate.value = true;
+        if (newValue !== quill.value.root.innerHTML) {
+          quill.value.root.innerHTML = newValue || '';
         }
         nextTick(() => {
-          isInternalUpdate = false;
+          isInternalUpdate.value = false;
         });
       }
     });

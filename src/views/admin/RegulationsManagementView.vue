@@ -24,10 +24,13 @@
       <DataTable
         v-else
         :columns="columns"
-        :data="regulations"
+        :data="getSortedRegulations"
         :currentPage="currentPage"
         :totalPages="totalPages"
+        :sortBy="sortBy"
+        :sortOrder="sortOrder"
         @page-change="changePage"
+        @sort="handleSort"
       >
         <template #isNew="{ row }">
           <StatusBadge
@@ -204,7 +207,7 @@
 </template>
 
 <script>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { debounce } from 'lodash';
 import AdminLayout from '@/components/admin/AdminLayout.vue';
 import DataTable from '@/components/common/DataTable.vue';
@@ -369,6 +372,8 @@ export default {
       };
       
       const editData = { ...regulation };
+      editData.isNew = Boolean(editData.isNew);
+      editData.isImportant = Boolean(editData.isImportant);
       editData.date = formatDate(editData.date);
       editData.updateDate = editData.updateDate ? formatDate(editData.updateDate) : '';
       
@@ -389,6 +394,8 @@ export default {
         }
 
         const regulationData = { ...formData };
+        regulationData.isNew = Boolean(regulationData.isNew);
+        regulationData.isImportant = Boolean(regulationData.isImportant);
         regulationData.useHtml = true; // Always use HTML with editor
         
         if (regulationData.date && regulationData.date.includes('T')) {
@@ -449,6 +456,38 @@ export default {
       }
     };
     
+    const sortBy = ref('');
+    const sortOrder = ref('asc');
+
+    const handleSort = (field) => {
+      if (!['id', 'title', 'date'].includes(field)) return;
+      if (sortBy.value === field) {
+        sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc';
+      } else {
+        sortBy.value = field;
+        sortOrder.value = 'asc';
+      }
+    };
+
+    const getSortedRegulations = computed(() => {
+      if (!sortBy.value) return regulations.value;
+      return [...regulations.value].sort((a, b) => {
+        let valA = a[sortBy.value];
+        let valB = b[sortBy.value];
+        if (sortBy.value === 'id') {
+          valA = Number(valA);
+          valB = Number(valB);
+        }
+        if (sortBy.value === 'date') {
+          valA = new Date(valA);
+          valB = new Date(valB);
+        }
+        if (valA < valB) return sortOrder.value === 'asc' ? -1 : 1;
+        if (valA > valB) return sortOrder.value === 'asc' ? 1 : -1;
+        return 0;
+      });
+    });
+    
     onMounted(() => {
       fetchRegulations();
     });
@@ -483,7 +522,11 @@ export default {
       confirmDelete,
       closeDeleteDialog,
       deleteRegulation,
-      handleFilesChanged
+      handleFilesChanged,
+      sortBy,
+      sortOrder,
+      handleSort,
+      getSortedRegulations
     };
   }
 }

@@ -24,10 +24,13 @@
       <DataTable
         v-else
         :columns="columns"
-        :data="users"
+        :data="getSortedUsers"
         :currentPage="currentPage"
         :totalPages="totalPages"
+        :sortBy="sortBy"
+        :sortOrder="sortOrder"
         @page-change="changePage"
+        @sort="handleSort"
       >
         <template #role="{ row }">
           <StatusBadge
@@ -171,7 +174,7 @@
 
 <script>
 // eslint-disable-next-line no-unused-vars
-import { ref, reactive, onMounted } from 'vue';
+import { ref, reactive, onMounted, computed } from 'vue';
 import AdminLayout from '@/components/admin/AdminLayout.vue';
 import DataTable from '@/components/common/DataTable.vue';
 import StatusBadge from '@/components/common/StatusBadge.vue';
@@ -258,6 +261,34 @@ export default {
       deleteItem
     } = useDeleteDialog(authService.deleteUser);
     
+    const sortBy = ref('');
+    const sortOrder = ref('asc');
+
+    const handleSort = (field) => {
+      if (!['id', 'fullName', 'username', 'email'].includes(field)) return;
+      if (sortBy.value === field) {
+        sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc';
+      } else {
+        sortBy.value = field;
+        sortOrder.value = 'asc';
+      }
+    };
+
+    const getSortedUsers = computed(() => {
+      if (!sortBy.value) return users.value;
+      return [...users.value].sort((a, b) => {
+        let valA = a[sortBy.value];
+        let valB = b[sortBy.value];
+        if (sortBy.value === 'id') {
+          valA = Number(valA);
+          valB = Number(valB);
+        }
+        if (valA < valB) return sortOrder.value === 'asc' ? -1 : 1;
+        if (valA > valB) return sortOrder.value === 'asc' ? 1 : -1;
+        return 0;
+      });
+    });
+    
     const fetchUsers = async () => {
       await fetchData();
     };
@@ -337,7 +368,11 @@ export default {
       saveUser,
       confirmDelete,
       closeDeleteDialog,
-      deleteUser
+      deleteUser,
+      sortBy,
+      sortOrder,
+      handleSort,
+      getSortedUsers
     };
   }
 }

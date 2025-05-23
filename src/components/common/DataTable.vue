@@ -3,8 +3,12 @@
       <table class="data-table">
         <thead>
           <tr>
-            <th v-for="(column, index) in columns" :key="index" :style="{ width: column.width || 'auto' }">
+            <th v-for="(column, index) in columns" :key="index" :style="{ width: column.width || 'auto' }" @click="$emit('sort', column.field)" style="cursor:pointer; user-select:none;">
               {{ column.label }}
+              <span v-if="sortBy === column.field">
+                <span v-if="sortOrder === 'asc'">▲</span>
+                <span v-else>▼</span>
+              </span>
             </th>
           </tr>
         </thead>
@@ -69,6 +73,14 @@
       showPagination: {
         type: Boolean,
         default: true
+      },
+      sortBy: {
+        type: String,
+        default: ''
+      },
+      sortOrder: {
+        type: String,
+        default: 'asc'
       }
     }
   }
